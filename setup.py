@@ -1,5 +1,5 @@
 from setuptools import find_packages, setup
-import APITaxi_utils
+import APITaxi_models
 from os import path
 from codecs import open
 
@@ -14,11 +14,11 @@ with open(path.join(HERE, 'requirements.txt'), encoding='utf-8') as reqs:
 
 setup(
     name='APITaxi_models',
-    version=APITaxi_utils.__version__,
-    description=APITaxi_utils.__doc__,
-    url=APITaxi_utils.__homepage__,
-    author=APITaxi_utils.__author__,
-    author_email=APITaxi_utils.__contact__,
+    version=APITaxi_models.__version__,
+    description=APITaxi_models.__doc__,
+    url=APITaxi_models.__homepage__,
+    author=APITaxi_models.__author__,
+    author_email=APITaxi_models.__contact__,
     license='MIT',
     classifiers=[
         'Development Status :: 4 Beta',
