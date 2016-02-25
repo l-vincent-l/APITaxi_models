@@ -353,12 +353,12 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
             'declined_by_taxi': 'free',
             'declined_by_customer': 'free',
             'incident_customer': 'free',
-            'incident_taxi': 'free',
+            'incident_taxi': 'off',
             'timeout_customer': 'free',
             'timeout_taxi': 'free',
             'outdated_customer': 'free',
             'outdated_taxi': 'free',
-                'failure': 'free'}
+            'failure': 'free'}
 
     def synchronize_status_with_hail(self, hail):
         description = self.vehicle.get_description(hail.operateur)
