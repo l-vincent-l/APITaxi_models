@@ -5,6 +5,6 @@ Flask-Security==1.7.5
 Flask-SQLAlchemy==2.1
 GeoAlchemy2==0.2.6
 Shapely==1.5.13
-SQLAlchemy==1.0.1t0
+SQLAlchemy==1.0.1
 SQLAlchemy-Defaults==0.4.4
 SQLAlchemy-Utils==0.31.4
