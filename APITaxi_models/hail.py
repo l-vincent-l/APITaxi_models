@@ -13,6 +13,9 @@ from flask_principal import RoleNeed, Permission
 from sqlalchemy.orm import validates
 from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
+from functools import wraps
+from datetime import datetime
+import json
 
 
 class Customer(HistoryMixin, db.Model, AsDictMixin):
@@ -274,3 +277,31 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def operateur(self):
         return User.query.get(self.operateur_id)
 
+class HailLog(object):
+    def __init__(self, method, hail, payload):
+        self.method = method
+        self.initial_status = hail._status
+        self.payload = payload
+        self.datetime = datetime.now()
+        self.id = hail.id
+
+    def store(self, response, redis_store):
+        redis_store.hset('hail:{}'.format(self.id),
+                self.datetime,
+                json.dumps({
+                    "method": self.method,
+                    "payload": self.payload,
+                    "initial_status": self.initial_status,
+                    "return": response.data,
+                    "code": response.status_code
+                    })
+        )
+
+    @classmethod
+    def after_request(cls, redis_store):
+        def decorator(response):
+            if not hasattr(g, 'hail_log'):
+                return response
+            g.hail_log.store(response, redis_store)
+            return response
+        return decorator
