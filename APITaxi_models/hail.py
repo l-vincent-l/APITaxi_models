@@ -190,14 +190,15 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             'declined_by_customer': ['moteur', 'admin'],
     }
 
+
     status_required = {
-            'sent_to_operator': 'received',
-            'received_by_operator': 'received',
-            'received_by_taxi': 'received_by_operator',
-            'accepted_by_taxi': 'received_by_taxi',
-            'declined_by_taxi': 'received_by_taxi',
-            'accepted_by_customer': 'accepted_by_taxi',
-            'declined_by_customer': 'accepted_by_taxi',
+            'sent_to_operator': ['received'],
+            'received_by_operator': ['received'],
+            'received_by_taxi': ['received_by_operator'],
+            'accepted_by_taxi': ['received_by_taxi'],
+            'declined_by_taxi': ['received_by_taxi'],
+            'accepted_by_customer': ['accepted_by_taxi'],
+            'declined_by_customer': ['accepted_by_taxi']
     }
 
     @property
@@ -219,7 +220,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             if not perm.can():
                 raise RuntimeError("You're not authorized to set this status")
         status_required = self.status_required.get(value, None)
-        if status_required and self._status != status_required:
+        if status_required and self._status not in status_required:
             raise ValueError("You cannot set status from {} to {}".format(self._status, value))
         self._status = value
         self.status_changed()
