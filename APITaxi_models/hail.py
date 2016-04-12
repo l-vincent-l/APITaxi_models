@@ -15,7 +15,7 @@ from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
 from functools import wraps
 from datetime import datetime
-import json
+import json, time
 
 
 class Customer(HistoryMixin, db.Model, AsDictMixin):
@@ -286,8 +286,8 @@ class HailLog(object):
         self.id = hail.id
 
     def store(self, response, redis_store):
-        redis_store.hset('hail:{}'.format(self.id),
-                self.datetime,
+        redis_store.zadd('hail:{}'.format(self.id),
+                time.mktime(self.datetime.timetuple()),
                 json.dumps({
                     "method": self.method,
                     "payload": self.payload,
