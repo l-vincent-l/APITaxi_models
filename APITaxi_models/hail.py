@@ -14,7 +14,7 @@ from sqlalchemy.orm import validates
 from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timedelta
 import json, time
 
 
@@ -286,7 +286,8 @@ class HailLog(object):
         self.id = hail.id
 
     def store(self, response, redis_store):
-        redis_store.zadd('hail:{}'.format(self.id),
+        name = 'hail:{}'.format(self.id)
+        redis_store.zadd(name,
                 time.mktime(self.datetime.timetuple()),
                 json.dumps({
                     "method": self.method,
@@ -296,6 +297,7 @@ class HailLog(object):
                     "code": response.status_code
                     })
         )
+        redis_store.expire(name, timedelta(week=6))
 
     @classmethod
     def after_request(cls, redis_store):
