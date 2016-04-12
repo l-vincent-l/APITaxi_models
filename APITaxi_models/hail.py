@@ -299,7 +299,7 @@ class HailLog(object):
                     "code": response.status_code
                     })
         )
-        redis_store.expire(name, timedelta(week=6))
+        redis_store.expire(name, timedelta(weeks=6))
 
     @classmethod
     def after_request(cls, redis_store):
