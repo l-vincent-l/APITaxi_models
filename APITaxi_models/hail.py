@@ -198,7 +198,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             'accepted_by_taxi': ['received_by_taxi'],
             'declined_by_taxi': ['received_by_taxi'],
             'accepted_by_customer': ['accepted_by_taxi'],
-            'declined_by_customer': ['accepted_by_taxi']
+            'declined_by_customer': ['emitted', 'received', 'sent_to_operator',
+                'received_by_operator', 'received_by_taxi', 'accepted_by_taxi'],
     }
 
     @property
