@@ -289,13 +289,14 @@ class HailLog(object):
 
     def store(self, response, redis_store):
         name = 'hail:{}'.format(self.id)
+        return_ = response.data if hasattr(response, 'data') else response.content
         redis_store.zadd(name,
                 time.mktime(self.datetime.timetuple()),
                 json.dumps({
                     "method": self.method,
                     "payload": self.payload,
                     "initial_status": self.initial_status,
-                    "return": response.data,
+                    "return": return_,
                     "code": response.status_code
                     })
         )
