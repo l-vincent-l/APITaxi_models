@@ -432,6 +432,7 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
                 "licence_plate": taxi['vehicle_licence_plate'],
                 "type": taxi['vehicle_description_type_'],
                 "cpam_conventionne": taxi['vehicle_description_cpam_conventionne'],
+                "engine": taxi['vehicle_description_engine'],
             },
             "ads": {
                 "insee": taxi['ads_insee'],
