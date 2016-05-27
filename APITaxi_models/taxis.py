@@ -430,6 +430,7 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
                 "characteristics": characs,
                 "nb_seats": taxi['vehicle_description_nb_seats'],
                 "licence_plate": taxi['vehicle_licence_plate'],
+                "type": taxi['vehicle_description_type_'],
             },
             "ads": {
                 "insee": taxi['ads_insee'],
