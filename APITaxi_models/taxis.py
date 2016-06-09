@@ -291,14 +291,10 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
     driver_id = db.Column(db.Integer, db.ForeignKey('driver.id'),
             nullable=True)
     driver = db.relationship('Driver', backref='driver', lazy='joined')
+    rating = db.Column(db.Float, default=4.5)
 
     _ACTIVITY_TIMEOUT = 15*60 #Used for dash
 
-
-
-    @property
-    def rating(self):
-        return 4.5
 
     @property
     def status(self):
