@@ -93,6 +93,7 @@ class ADS(HistoryMixin, db.Model, AsDictMixin, FilterOr404Mixin):
 
 
 class Driver(HistoryMixin, db.Model, AsDictMixin, FilterOr404Mixin):
+    public_relations = ['departement']
     @declared_attr
     def added_by(cls):
         return Column(db.Integer,db.ForeignKey('user.id'))
