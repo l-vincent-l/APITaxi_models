@@ -136,7 +136,7 @@ def parse_number(str_):
 
 class TaxiRedis(object):
     _caracs = None
-    _DISPONIBILITY_DURATION = 15*60 #Used in "is_fresh, is_free'
+    _DISPONIBILITY_DURATION = 2*60 #Used in "is_fresh, is_free'
     _FORMAT_OPERATOR = '{timestamp:Number} {lat} {lon} {status} {device}'
     _fresh_operateurs_timestamps = None
 
