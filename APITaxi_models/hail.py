@@ -2,6 +2,7 @@
 from .taxis import Taxi as TaxiM
 from flask.ext.security import login_required, roles_accepted,\
         roles_accepted, current_user
+from flask.ext.restplus import abort
 from datetime import datetime, timedelta
 from APITaxi_utils import fields, influx_db
 from APITaxi_utils.mixins import GetOr404Mixin, HistoryMixin, AsDictMixin
@@ -10,7 +11,7 @@ from APITaxi_utils.get_short_uuid import get_short_uuid
 from . import db
 from .security import User
 from flask_principal import RoleNeed, Permission
-from sqlalchemy.orm import validates
+from sqlalchemy.orm import validates, joinedload, lazyload
 from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
 from functools import wraps
@@ -278,6 +279,18 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     @property
     def operateur(self):
         return User.query.get(self.operateur_id)
+
+    @classmethod
+    def get_or_404(cls, hail_id):
+        m = Hail.query.options(
+            joinedload("_operateur"),
+            lazyload("_operateur.roles"),
+            lazyload("_operateur.logos"),
+            lazyload("taxi_relation")).filter_by(id=hail_id).first()
+        if not m:
+            abort(404, "Unable to find hail: {}".format(hail_id))
+        return m
+
 
 class HailLog(object):
     def __init__(self, method, hail, payload):
