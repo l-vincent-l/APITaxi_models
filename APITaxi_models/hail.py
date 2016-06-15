@@ -17,6 +17,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from functools import wraps
 from datetime import datetime, timedelta
 import json, time
+from sqlalchemy.sql.expression import text
 
 
 class Customer(HistoryMixin, db.Model, AsDictMixin):
@@ -282,11 +283,9 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
     @classmethod
     def get_or_404(cls, hail_id):
-        m = Hail.query.options(
-            joinedload("_operateur"),
-            lazyload("_operateur.roles"),
-            lazyload("_operateur.logos"),
-            lazyload("taxi_relation")).filter_by(id=hail_id).first()
+        m = Hail.query.from_statement(
+            text("SELECT * FROM hail where id=:hail_id")
+        ).params(hail_id=hail_id).one()
         if not m:
             abort(404, "Unable to find hail: {}".format(hail_id))
         return m
