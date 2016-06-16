@@ -299,18 +299,21 @@ class HailLog(object):
         self.datetime = datetime.now()
         self.id = hail.id
 
-    def store(self, response, redis_store):
+    def store(self, response, redis_store, error=None):
         name = 'hail:{}'.format(self.id)
-        return_ = response.data if hasattr(response, 'data') else response.content
-        redis_store.zadd(name,
-                time.mktime(self.datetime.timetuple()),
-                json.dumps({
+        to_store = {
                     "method": self.method,
                     "payload": self.payload,
                     "initial_status": self.initial_status,
-                    "return": return_,
-                    "code": response.status_code
-                    })
+        }
+        if error:
+            to_store['error'] = error
+        else:
+            to_store['return'] = response.data if hasattr(response, 'data') else response.content
+            to_store['code'] = response.status_code
+        redis_store.zadd(name,
+                time.mktime(self.datetime.timetuple()),
+                json.dumps(to_store)
         )
         redis_store.expire(name, timedelta(weeks=6))
 
