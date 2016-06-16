@@ -2,6 +2,7 @@
 from .taxis import Taxi as TaxiM
 from flask.ext.security import login_required, roles_accepted,\
         roles_accepted, current_user
+from flask.ext.restplus import abort
 from datetime import datetime, timedelta
 from APITaxi_utils import fields, influx_db
 from APITaxi_utils.mixins import GetOr404Mixin, HistoryMixin, AsDictMixin
@@ -10,12 +11,13 @@ from APITaxi_utils.get_short_uuid import get_short_uuid
 from . import db
 from .security import User
 from flask_principal import RoleNeed, Permission
-from sqlalchemy.orm import validates
+from sqlalchemy.orm import validates, joinedload, lazyload
 from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
 from functools import wraps
 from datetime import datetime, timedelta
 import json, time
+from sqlalchemy.sql.expression import text
 
 
 class Customer(HistoryMixin, db.Model, AsDictMixin):
@@ -279,6 +281,16 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def operateur(self):
         return User.query.get(self.operateur_id)
 
+    @classmethod
+    def get_or_404(cls, hail_id):
+        m = Hail.query.from_statement(
+            text("SELECT * FROM hail where id=:hail_id")
+        ).params(hail_id=hail_id).one()
+        if not m:
+            abort(404, "Unable to find hail: {}".format(hail_id))
+        return m
+
+
 class HailLog(object):
     def __init__(self, method, hail, payload):
         self.method = method
@@ -287,18 +299,21 @@ class HailLog(object):
         self.datetime = datetime.now()
         self.id = hail.id
 
-    def store(self, response, redis_store):
+    def store(self, response, redis_store, error=None):
         name = 'hail:{}'.format(self.id)
-        return_ = response.data if hasattr(response, 'data') else response.content
-        redis_store.zadd(name,
-                time.mktime(self.datetime.timetuple()),
-                json.dumps({
+        to_store = {
                     "method": self.method,
                     "payload": self.payload,
                     "initial_status": self.initial_status,
-                    "return": return_,
-                    "code": response.status_code
-                    })
+        }
+        if error:
+            to_store['error'] = error
+        else:
+            to_store['return'] = response.data if hasattr(response, 'data') else response.content
+            to_store['code'] = response.status_code
+        redis_store.zadd(name,
+                time.mktime(self.datetime.timetuple()),
+                json.dumps(to_store)
         )
         redis_store.expire(name, timedelta(weeks=6))
 
