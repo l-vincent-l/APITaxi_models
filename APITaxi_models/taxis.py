@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from . import db
 from .vehicle import Vehicle, VehicleDescription, Model, Constructor
 from .administrative import ZUPC, Departement
@@ -18,7 +17,7 @@ import time
 from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
 from datetime import datetime
-from itertools import groupby
+from itertools import groupby, izip
 
 
 owner_type_enum = ['company', 'individual']
@@ -395,7 +394,10 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
 
     @staticmethod
     def generate_dict(taxi_db, taxi_redis=None, operator=None, min_time=None,
-            favorite_operator=None):
+                      favorite_operator=None, position=None, distance=None,
+                      timestamps=None):
+        if not taxi_db:
+            return None
         taxi_id = taxi_db[0]['taxi_id']
         if not taxi_db[0]['taxi_ads_id']:
             current_app.logger.debug('Taxi {} has no ADS'.format(taxi_id))
@@ -405,6 +407,14 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
             if not operator:
                 current_app.logger.debug('Unable to find operator for taxi {}'.format(taxi_id))
                 return None
+        elif timestamps:
+            timestamp, operator = -1, None
+            for t, ts in izip(taxi_db, timestamps):
+                if favorite_operator and t['u_email'] == favorite_operator:
+                    timestamp = timestamps[i], favorite_operator
+                    break
+                if ts > timestamp:
+                    timestamp, operator = ts, t['u_email']
         else:
             timestamp = None
         taxi = None
@@ -419,7 +429,7 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
         return {
             "id": taxi_id,
             "operator": t['u_email'],
-            "position": taxi_redis.coords if taxi_redis else None,
+            "position": taxi_redis.coords if taxi_redis else position,
             "vehicle": {
                 "model": taxi['model_name'],
                 "constructor": taxi['constructor_name'],
@@ -440,7 +450,7 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
                 "professional_licence": taxi['driver_professional_licence']
             },
             "last_update": timestamp,
-            "crowfly_distance": float(taxi_redis.distance) if taxi_redis else None,
+            "crowfly_distance": float(taxi_redis.distance) if taxi_redis else distance,
             "rating": 4.5,
             "status": taxi['vehicle_description_status']
         }
