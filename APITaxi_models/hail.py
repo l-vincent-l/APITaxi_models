@@ -39,10 +39,10 @@ class Customer(HistoryMixin, db.Model, AsDictMixin):
         self.added_via = 'api'
 
 status_enum_list = [ 'emitted', 'received', 'sent_to_operator',
- 'received_by_operator', 'received_by_taxi', 'accepted_by_taxi',
- 'accepted_by_customer', 'declined_by_taxi', 'declined_by_customer',
- 'incident_customer', 'incident_taxi', 'timeout_customer', 'timeout_taxi',
-    'outdated_customer', 'outdated_taxi', 'failure']#This may be redundant
+ 'received_by_operator', 'received_by_taxi', 'timeout_taxi', 'accepted_by_taxi',
+ 'timeout_customer', 'incident_taxi', 'declined_by_taxi', 'accepted_by_customer',
+ 'incident_customer', 'declined_by_customer', 'outdated_customer',
+ 'outdated_taxi', 'failure']#This may be redundant
 
 
 rating_ride_reason_enum = ['ko', 'payment', 'courtesy', 'route', 'cleanliness',
@@ -196,7 +196,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     status_required = {
             'sent_to_operator': ['received'],
             'received_by_operator': ['received'],
-            'received_by_taxi': ['received_by_operator'],
+            'received_by_taxi': ['received_by_operator', 'received'],
             'accepted_by_taxi': ['received_by_taxi'],
             'declined_by_taxi': ['received_by_taxi'],
             'accepted_by_customer': ['accepted_by_taxi'],
@@ -225,7 +225,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         status_required = self.status_required.get(value, None)
         if status_required and self._status not in status_required:
             raise ValueError("You cannot set status from {} to {}".format(self._status, value))
-        self._status = value
+        if not self._status or status_enum_list.index(value) > status_enum_list.index(self._status):
+            self._status = value
         self.status_changed()
         taxi = TaxiM.cache.get(self.taxi_id)
         taxi.synchronize_status_with_hail(self)
