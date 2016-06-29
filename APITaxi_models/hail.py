@@ -295,10 +295,10 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 class HailLog(object):
     def __init__(self, method, hail, payload):
         self.method = method
-        self.initial_status = hail._status
+        self.initial_status = hail._status if hail else ""
         self.payload = payload
         self.datetime = datetime.now()
-        self.id = hail.id
+        self.id = hail.id if hail else "notposted:" + str(get_short_uuid())
 
     def store(self, response, redis_store, error=None):
         name = 'hail:{}'.format(self.id)
