@@ -257,11 +257,11 @@ class TaxiRedis(object):
     def set_avaibility(self, operator_email, status):
         taxi_id_operator = "{}:{}".format(self.id, operator_email)
         if status == 'free':
-            current_app.extensions['redis'].srem(
+            current_app.extensions['redis'].zrem(
                 current_app.config['REDIS_NOT_AVAILABLE'], taxi_id_operator)
         else:
-            current_app.extensions['redis'].sadd(
-                current_app.config['REDIS_NOT_AVAILABLE'], taxi_id_operator)
+            current_app.extensions['redis'].zadd(
+                current_app.config['REDIS_NOT_AVAILABLE'], 0., taxi_id_operator)
 
 
 class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
