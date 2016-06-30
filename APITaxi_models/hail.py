@@ -297,7 +297,7 @@ class HailLog(object):
         self.method = method
         self.initial_status = hail._status if hail else ""
         self.payload = payload
-        self.datetime = datetime.now()
+        self.datetime = time.time()
         self.id = hail.id if hail else "notposted:" + str(get_short_uuid())
 
     def store(self, response, redis_store, error=None):
@@ -313,10 +313,7 @@ class HailLog(object):
         else:
             to_store['return'] = response.data if hasattr(response, 'data') else response.content
             to_store['code'] = response.status_code
-        redis_store.zadd(name,
-                time.mktime(self.datetime.timetuple()),
-                json.dumps(to_store)
-        )
+        redis_store.zadd(name, self.datetime, json.dumps(to_store))
         redis_store.expire(name, timedelta(weeks=6))
 
     @classmethod
