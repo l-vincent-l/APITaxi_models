@@ -306,6 +306,7 @@ class HailLog(object):
                     "method": self.method,
                     "payload": self.payload,
                     "initial_status": self.initial_status,
+                    "user": current_user.email
         }
         if error:
             to_store['error'] = error
