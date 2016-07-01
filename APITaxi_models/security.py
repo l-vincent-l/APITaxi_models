@@ -75,6 +75,12 @@ class User(CacheableMixin, db.Model, UserMixin, MarshalMixin, FilterOr404Mixin,
             label=u'Valeur de la clé d\'api',
             description=u"""Valeur de la clé d'api envoyé par l'ODT
             à votre serveur pour l'authentification.""")
+    reprieve_begin = Column(db.DateTime, nullable=True)
+    reprieve_end = Column(db.DateTime, nullable=True)
+    reprieve_length = Column(db.Integer, nullable=True)
+    ban_begin = Column(db.DateTime, nullable=True)
+    ban_end = Column(db.DateTime, nullable=True)
+    ban_length = Column(db.Integer, nullable=True)
 
     def __init__(self, *args, **kwargs):
         kwargs['apikey'] = str(uuid.uuid4())
