@@ -276,7 +276,6 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                 moteur_id=self.added_by).first()
         customer.reprieve_begin = datetime.now()
         if not customer.reprieve_end:
-            print "no customer_reprieve_end"
             if reporting_customer:
                 customer.reprieve_end = datetime.now() + timedelta(days=15)
                 customer.ban_begin = datetime.now()
@@ -284,7 +283,6 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             else:
                 customer.reprieve_end = datetime.now() + timedelta(days=7)
         else:
-            print "customer_reprieve_end", customer.reprieve_end, datetime.now()
             previous_duration = customer.reprieve_end - customer.reprieve_begin
             if reporting_customer:
                 customer.reprieve_end = datetime.now() + previous_duration * 3
