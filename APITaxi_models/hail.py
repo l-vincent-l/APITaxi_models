@@ -16,7 +16,7 @@ from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
 from functools import wraps
 from datetime import datetime, timedelta
-import json, time
+import json, time, math
 from sqlalchemy.sql.expression import text
 
 
@@ -25,24 +25,27 @@ class Customer(HistoryMixin, db.Model, AsDictMixin):
     def added_by(cls):
         return db.Column(db.Integer,db.ForeignKey('user.id'))
     id = db.Column(db.String, primary_key=True)
-    operateur_id = db.Column(db.Integer, db.ForeignKey('user.id'),
+    moteur_id = db.Column(db.Integer, db.ForeignKey('user.id'),
                              primary_key=True)
-    nb_sanctions = db.Column(db.Integer, default=0)
+    phone_number = db.Column(db.String, nullable=True)
+    reprieve_begin = db.Column(db.DateTime, nullable=True)
+    reprieve_end = db.Column(db.DateTime, nullable=True)
+    ban_begin = db.Column(db.DateTime, nullable=True)
+    ban_end = db.Column(db.DateTime, nullable=True)
 
     def __init__(self, customer_id, *args, **kwargs):
         db.Model.__init__(self)
         HistoryMixin.__init__(self)
         super(self.__class__, self).__init__(**kwargs)
         self.id = customer_id
-        self.operateur_id = current_user.id
-        self.nb_sanctions = 0
+        self.moteur_id = current_user.id
         self.added_via = 'api'
 
 status_enum_list = [ 'emitted', 'received', 'sent_to_operator',
  'received_by_operator', 'received_by_taxi', 'timeout_taxi', 'accepted_by_taxi',
  'timeout_customer', 'incident_taxi', 'declined_by_taxi', 'accepted_by_customer',
  'incident_customer', 'declined_by_customer', 'outdated_customer',
- 'outdated_taxi', 'failure']#This may be redundant
+ 'outdated_taxi', 'failure', 'customer_banned']#This may be redundant
 
 
 rating_ride_reason_enum = ['ko', 'payment', 'courtesy', 'route', 'cleanliness',
@@ -165,6 +168,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def validate_reporting_customer(self, key, value):
         if current_user.id != self.operateur_id:
             raise RuntimeError()
+        self.manage_penalty(True)
         return value
 
     @validates('rating_ride')
@@ -227,6 +231,10 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             raise ValueError("You cannot set status from {} to {}".format(self._status, value))
         if not self._status or status_enum_list.index(value) > status_enum_list.index(self._status):
             self._status = value
+        if self._status in ('timeout_customer', 'declined_by_customer', 
+                            'incident_customer'):
+            self.manage_penalty()
+
         self.status_changed()
         taxi = TaxiM.cache.get(self.taxi_id)
         taxi.synchronize_status_with_hail(self)
@@ -262,6 +270,30 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         self.status = timeout_status
         db.session.commit()
         return False
+
+    def manage_penalty(self, reporting_customer=False):
+        customer = Customer.query.filter_by(id=self.customer_id,
+                moteur_id=self.added_by).first()
+        customer.reprieve_begin = datetime.now()
+        if not customer.reprieve_end:
+            print "no customer_reprieve_end"
+            if reporting_customer:
+                customer.reprieve_end = datetime.now() + timedelta(days=15)
+                customer.ban_begin = datetime.now()
+                customer.ban_end = datetime.now() + timedelta(days=7)
+            else:
+                customer.reprieve_end = datetime.now() + timedelta(days=7)
+        else:
+            print "customer_reprieve_end", customer.reprieve_end, datetime.now()
+            previous_duration = customer.reprieve_end - customer.reprieve_begin
+            if reporting_customer:
+                customer.reprieve_end = datetime.now() + previous_duration * 3
+            else:
+                customer.reprieve_end = datetime.now() + previous_duration * 2
+            if customer.reprieve_end >= datetime.now():
+                customer.ban_begin = datetime.now()
+                customer.ban_end = datetime.now() + timedelta(
+                                        days=math.ceil(previous_duration.days/2))
 
     def to_dict(self):
         self.check_time_out()

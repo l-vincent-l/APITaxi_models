@@ -354,11 +354,15 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
             'timeout_taxi': 'off',
             'outdated_customer': 'free',
             'outdated_taxi': 'free',
-            'failure': 'off'}
+            'failure': 'off',
+            'customer_banned': None}
 
     def synchronize_status_with_hail(self, hail):
+        next_status = self.map_hail_status_taxi_status[hail.status]
+        if not next_status:
+            return
         description = self.vehicle.get_description(hail.operateur)
-        description.status = self.map_hail_status_taxi_status[hail.status]
+        description.status = next_status
         self.last_update_at = datetime.now()
         RawTaxi.flush(self.id)
 
