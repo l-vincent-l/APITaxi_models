@@ -43,8 +43,8 @@ class Customer(HistoryMixin, db.Model, AsDictMixin):
 
 status_enum_list = [ 'emitted', 'received', 'sent_to_operator',
  'received_by_operator', 'received_by_taxi', 'timeout_taxi', 'accepted_by_taxi',
- 'timeout_customer', 'incident_taxi', 'declined_by_taxi', 'accepted_by_customer',
- 'incident_customer', 'declined_by_customer', 'outdated_customer',
+ 'timeout_customer', 'declined_by_taxi', 'accepted_by_customer',
+ 'incident_customer', 'incident_taxi', 'declined_by_customer', 'outdated_customer',
  'outdated_taxi', 'failure', 'customer_banned']#This may be redundant
 
 
