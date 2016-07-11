@@ -415,7 +415,7 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
             timestamp, operator = -1, None
             for t, ts in izip(taxi_db, timestamps):
                 if favorite_operator and t['u_email'] == favorite_operator:
-                    timestamp = timestamps[i], favorite_operator
+                    timestamp = ts, favorite_operator
                     break
                 if ts > timestamp:
                     timestamp, operator = ts, t['u_email']
