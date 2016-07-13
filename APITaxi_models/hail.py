@@ -277,17 +277,17 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         customer.reprieve_begin = datetime.now()
         if not customer.reprieve_end:
             if reporting_customer:
-                customer.reprieve_end = datetime.now() + timedelta(days=15)
+                customer.reprieve_end = datetime.now() + timedelta(hours=2)
                 customer.ban_begin = datetime.now()
-                customer.ban_end = datetime.now() + timedelta(days=7)
+                customer.ban_end = datetime.now() + timedelta(hours=1)
             else:
-                customer.reprieve_end = datetime.now() + timedelta(days=7)
+                customer.reprieve_end = datetime.now() + timedelta(hours=4)
         else:
             previous_duration = customer.reprieve_end - customer.reprieve_begin
             if reporting_customer:
-                customer.reprieve_end = datetime.now() + previous_duration * 3
+                customer.reprieve_end = datetime.now() + previous_duration * 8
             else:
-                customer.reprieve_end = datetime.now() + previous_duration * 2
+                customer.reprieve_end = datetime.now() + previous_duration * 6
             if customer.reprieve_end >= datetime.now():
                 customer.ban_begin = datetime.now()
                 customer.ban_end = datetime.now() + timedelta(
