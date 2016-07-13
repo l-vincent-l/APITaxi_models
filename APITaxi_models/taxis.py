@@ -472,7 +472,8 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
 
     @staticmethod
     def flush(id_):
-        current_app.extensions['redis'].delete((RawTaxi.region, id_))
+        region = current_app.extensions['dogpile_cache'].get_region(RawTaxi.region)
+        region.delete((RawTaxi.region, id_))
 
 def refresh_taxi(**kwargs):
     id_ = kwargs.get('id_', None)
