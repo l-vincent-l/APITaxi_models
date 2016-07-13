@@ -290,8 +290,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                 customer.reprieve_end = datetime.now() + previous_duration * 6
             if customer.reprieve_end >= datetime.now():
                 customer.ban_begin = datetime.now()
-                customer.ban_end = datetime.now() + timedelta(
-                                        days=math.ceil(previous_duration.days/2))
+                customer.ban_end = datetime.now() + previous_duration / 2
 
     def to_dict(self):
         self.check_time_out()
