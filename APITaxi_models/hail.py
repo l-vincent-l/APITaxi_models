@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from .taxis import Taxi as TaxiM
-from flask.ext.security import login_required, roles_accepted,\
+from flask_security import login_required, roles_accepted,\
         roles_accepted, current_user
-from flask.ext.restplus import abort
+from flask_restplus import abort
 from datetime import datetime, timedelta
 from APITaxi_utils import fields, influx_db
 from APITaxi_utils.mixins import GetOr404Mixin, HistoryMixin, AsDictMixin

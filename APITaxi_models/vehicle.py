@@ -8,7 +8,7 @@ from APITaxi_utils.caching import CacheableMixin, query_callable
 from sqlalchemy_defaults import Column
 from sqlalchemy.types import Enum
 from sqlalchemy import UniqueConstraint, and_
-from flask.ext.login import current_user
+from flask_login import current_user
 from itertools import compress
 from sqlalchemy.ext.declarative import declared_attr
 from flask import current_app
