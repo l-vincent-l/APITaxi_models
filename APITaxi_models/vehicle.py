@@ -12,6 +12,7 @@ from flask_login import current_user
 from itertools import compress
 from sqlalchemy.ext.declarative import declared_attr
 from flask import current_app
+from time import time
 
 @unique_constructor(db.session,
                     lambda name: name,
@@ -172,6 +173,8 @@ class VehicleDescription(HistoryMixin, CacheableMixin, db.Model, AsDictMixin):
         operator = User.query.get(self.added_by)
         for t in Taxi.query.join(Taxi.vehicle, aliased=True).filter_by(id=self.vehicle_id):
             t.set_avaibility(operator.email, self._status)
+            current_app.extensions['redis_saved'].zadd(
+                'taxi_status:{} {}_{} {}'.format(t.id, self._status,time(), time()))
 
 
     @classmethod
