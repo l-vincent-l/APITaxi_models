@@ -175,8 +175,8 @@ class VehicleDescription(HistoryMixin, CacheableMixin, db.Model, AsDictMixin):
             t.set_avaibility(operator.email, self._status)
             current_app.extensions['redis_saved'].zadd(
                 'taxi_status:{}'.format(t.id),
+                float(time()),
                 '{}_{}'.format(self._status, time()),
-                time()
             )
 
 
