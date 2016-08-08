@@ -174,7 +174,10 @@ class VehicleDescription(HistoryMixin, CacheableMixin, db.Model, AsDictMixin):
         for t in Taxi.query.join(Taxi.vehicle, aliased=True).filter_by(id=self.vehicle_id):
             t.set_avaibility(operator.email, self._status)
             current_app.extensions['redis_saved'].zadd(
-                'taxi_status:{} {}_{} {}'.format(t.id, self._status,time(), time()))
+                'taxi_status:{}'.format(t.id),
+                '{}_{}'.format(self._status, time()),
+                time()
+            )
 
 
     @classmethod
