@@ -41,11 +41,14 @@ class Customer(HistoryMixin, db.Model, AsDictMixin):
         self.moteur_id = current_user.id
         self.added_via = 'api'
 
+new_version_statuses = ['finished', 'customer_on_board',
+                        'timeout_accepted_by_customer']
 status_enum_list = [ 'emitted', 'received', 'sent_to_operator',
  'received_by_operator', 'received_by_taxi', 'timeout_taxi', 'accepted_by_taxi',
  'timeout_customer', 'declined_by_taxi', 'accepted_by_customer',
  'incident_customer', 'incident_taxi', 'declined_by_customer', 'outdated_customer',
- 'outdated_taxi', 'failure', 'customer_banned']#This may be redundant
+ 'outdated_taxi', 'failure'#This may be redundant
+ , 'customer_banned'] + new_version_statuses 
 
 
 rating_ride_reason_enum = ['ko', 'payment', 'courtesy', 'route', 'cleanliness',
@@ -82,8 +85,11 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     customer_lat = db.Column(db.Float, nullable=False)
     customer_address = db.Column(db.String, nullable=False)
     customer_phone_number = db.Column(db.String, nullable=False)
-    taxi_id = db.Column(db.String, db.ForeignKey('taxi.id'), nullable=False)
-    taxi_relation = db.relationship('Taxi', backref="taxi", lazy="joined")
+    taxi_id = db.Column(db.String, db.ForeignKey('taxi.id', name='hail_taxi_id'),
+                        nullable=False)
+    taxi_relation = db.relationship('Taxi',
+                            backref="taxi", lazy="joined",
+                            foreign_keys=taxi_id)
     _status = db.Column(db.Enum(*status_enum_list,
         name='hail_status'), default='emitted', nullable=False, name='status')
     last_status_change = db.Column(db.DateTime)
@@ -116,6 +122,9 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     change_to_timeout_taxi = db.Column(db.DateTime, nullable=True)
     change_to_timeout_customer = db.Column(db.DateTime, nullable=True)
     change_to_failure = db.Column(db.DateTime, nullable=True)
+    change_to_finished = db.Column(db.DateTime, nullable=True)
+    change_to_customer_onboard = db.Column(db.DateTime, nullable=True)
+    change_to_timeout_accepted_by_customer = db.Column(db.DateTime, nullable=True)
 
 
     def __init__(self, *args, **kwargs):
@@ -182,7 +191,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             'sent_to_operator': (10, 'failure'),
             'received_by_operator': (10, 'failure'),
             'received_by_taxi': (30, 'timeout_taxi'),
-            'accepted_by_taxi': (20, 'timeout_customer')
+            'accepted_by_taxi': (20, 'timeout_customer'),
+            'accepted_by_customer': (30*60, 'timeout_accepted_by_customer')
     }
 
     roles_accepted = {
@@ -213,6 +223,17 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         time, next_status = self.timeouts.get(self._status, (None, None))
         if time:
             self.check_time_out(time, next_status)
+        if self._status in new_version_statuses and g.version <= 2:
+            change_list = [
+                'change_to_sent_to_operator', 'change_to_received_by_operator',
+                'change_to_received_by_taxi', 'change_to_accepted_by_taxi',
+                'change_to_accepted_by_customer', 'change_to_declined_by_taxi',
+                'change_to_declined_by_customer', 'change_to_incident_taxi',
+                'change_to_incident_customer', 'change_to_timeout_taxi',
+                'change_to_timeout_customer', 'change_to_failure'
+            ]
+            last_change = max(change_list, key=lambda c: getattr(self, c))
+            return last_change[len('change_to_'):]
         return self._status
 
     @status.setter
@@ -228,8 +249,11 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                 raise RuntimeError("You're not authorized to set this status")
         status_required = self.status_required.get(value, None)
         if status_required and self._status not in status_required:
-            raise ValueError("You cannot set status from {} to {}".format(self._status, value))
-        if not self._status or status_enum_list.index(value) > status_enum_list.index(self._status):
+            raise ValueError("You cannot set status from {} to {}".format(
+                self._status, value))
+        old_status_index = status_enum_list.index(value) if value else 0
+        new_status_index = status_enum_list.index(self._status) if self._status else 0
+        if not self._status or old_status_index > new_status_index:
             self._status = value
         if self._status in ('timeout_customer', 'declined_by_customer', 
                             'incident_customer'):
