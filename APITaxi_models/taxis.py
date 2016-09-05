@@ -292,6 +292,11 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
             nullable=True)
     driver = db.relationship('Driver', backref='driver', lazy='joined')
     rating = db.Column(db.Float, default=4.5)
+    current_hail_id = db.Column(db.String,
+                                db.ForeignKey('hail.id', name='taxi_hail_id'),
+                                nullable=True)
+    current_hail = db.relationship('Hail', backref='hail',
+                                  foreign_keys=[current_hail_id])
 
     _ACTIVITY_TIMEOUT = 15*60 #Used for dash
 
@@ -305,6 +310,15 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
     def status(self, status):
         self.vehicle.description.status = status
         self.last_update_at = datetime.now()
+        if self.current_hail_id is None:
+            return
+        if status == 'answering':
+            return
+        if status in ('free', 'off'):
+            self.current_hail.status = 'finished'
+            self.current_hail_id = None
+        if status == 'occupied':
+            self.current_hail.status = 'customer_onboard'
 
 
     def is_free(self, min_time=None):
@@ -458,7 +472,6 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
             "rating": 4.5,
             "status": taxi['vehicle_description_status']
         }
-
 
     @staticmethod
     def get(ids=None, operateur_id=None,id_=None):
