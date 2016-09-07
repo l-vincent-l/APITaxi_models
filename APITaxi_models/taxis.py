@@ -293,9 +293,9 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
     driver = db.relationship('Driver', backref='driver', lazy='joined')
     rating = db.Column(db.Float, default=4.5)
     current_hail_id = db.Column(db.String,
-                                db.ForeignKey('hail.id', name='taxi_hail_id'),
-                                nullable=True)
-    current_hail = db.relationship('Hail', backref='hail',
+                    db.ForeignKey('hail.id', name='taxi_hail_id', use_alter=True),
+                    nullable=True)
+    current_hail = db.relationship('Hail', backref='hail', post_update=True,
                                   foreign_keys=[current_hail_id])
 
     _ACTIVITY_TIMEOUT = 15*60 #Used for dash
@@ -310,15 +310,26 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
     def status(self, status):
         self.vehicle.description.status = status
         self.last_update_at = datetime.now()
-        if self.current_hail_id is None:
+        if not self.current_hail_id:
             return
+        new_status, new_hail_id = self.get_new_hail_status(
+            self.current_hail_id, status, self.current_hail.status)
+        if new_status is not None:
+            self.current_hail.status = new_status
+            self.current_hail_id = new_hail_id
+
+    @classmethod
+    def get_new_hail_status(cls, current_hail_id, status, hail_status):
+        if current_hail_id is None:
+            return (None, None)
         if status == 'answering':
-            return
+            return (None, None)
         if status in ('free', 'off'):
-            self.current_hail.status = 'finished'
-            self.current_hail_id = None
+            if hail_status in ('accepted_by_customer', 'customer_on_board'):
+                return ('finished', None)
+            return (hail_status, None)
         if status == 'occupied':
-            self.current_hail.status = 'customer_onboard'
+            return ('customer_on_board', current_hail_id)
 
 
     def is_free(self, min_time=None):
@@ -372,7 +383,7 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
             'customer_banned': None}
 
     def synchronize_status_with_hail(self, hail):
-        next_status = self.map_hail_status_taxi_status[hail.status]
+        next_status = self.map_hail_status_taxi_status.get(hail._status, None)
         if not next_status:
             return
         description = self.vehicle.get_description(hail.operateur)
