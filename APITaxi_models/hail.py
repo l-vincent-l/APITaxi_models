@@ -85,7 +85,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     customer_lat = db.Column(db.Float, nullable=False)
     customer_address = db.Column(db.String, nullable=False)
     customer_phone_number = db.Column(db.String, nullable=False)
-    taxi_id = db.Column(db.String, db.ForeignKey('taxi.id', name='hail_taxi_id'),
+    taxi_id = db.Column(db.String,
+                        db.ForeignKey('taxi.id', name='hail_taxi_id', use_alter=True),
                         nullable=False)
     taxi_relation = db.relationship('Taxi',
                             backref="taxi", lazy="joined",
@@ -123,7 +124,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     change_to_timeout_customer = db.Column(db.DateTime, nullable=True)
     change_to_failure = db.Column(db.DateTime, nullable=True)
     change_to_finished = db.Column(db.DateTime, nullable=True)
-    change_to_customer_onboard = db.Column(db.DateTime, nullable=True)
+    change_to_customer_on_board = db.Column(db.DateTime, nullable=True)
     change_to_timeout_accepted_by_customer = db.Column(db.DateTime, nullable=True)
 
 
@@ -232,7 +233,9 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                 'change_to_incident_customer', 'change_to_timeout_taxi',
                 'change_to_timeout_customer', 'change_to_failure'
             ]
-            last_change = max(change_list, key=lambda c: getattr(self, c))
+            basetime = datetime(1970, 1, 1)
+            last_change = max(change_list,
+                              key=lambda c: getattr(self, c) or basetime)
             return last_change[len('change_to_'):]
         return self._status
 
