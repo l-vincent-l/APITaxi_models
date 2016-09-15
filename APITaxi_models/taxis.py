@@ -322,14 +322,21 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
     def get_new_hail_status(cls, current_hail_id, status, hail_status):
         if current_hail_id is None:
             return (None, None)
-        if status == 'answering':
+        if status == 'answering' or status == 'oncoming':
             return (None, None)
         if status in ('free', 'off'):
             if hail_status in ('accepted_by_customer', 'customer_on_board'):
                 return ('finished', None)
             return (hail_status, None)
         if status == 'occupied':
-            return ('customer_on_board', current_hail_id)
+            if hail_status == 'accepted_by_customer':
+                return ('customer_on_board', current_hail_id)
+            #If it's a final status, we detach the hail
+            elif hail_status in ['timeout_taxi',  'timeout_customer',
+                                 'declined_by_taxi',  'incident_customer',
+                                 'incident_taxi', 'declined_by_customer', 'failure']:
+                return (hail_status, None)
+        return (None, None)
 
 
     def is_free(self, min_time=None):
