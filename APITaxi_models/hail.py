@@ -266,23 +266,24 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         taxi = TaxiM.cache.get(self.taxi_id)
         taxi.synchronize_status_with_hail(self)
         client = influx_db.get_client(current_app.config['INFLUXDB_TAXIS_DB'])
-        try:
-            client.write_points([{
-                "measurement": "hails_status_changed",
-                "tags": {
-                    "added_by": User.query.get(self.added_by).email,
-                    "operator": self.operateur.email,
-                    "zupc": taxi.ads.zupc.insee,
-                    "previous_status": old_status,
-                    "status": self._status
-                    },
-                "time": datetime.utcnow().strftime('%Y%m%dT%H:%M:%SZ'),
-                "fields": {
-                    "value": 1
-                }
-                }])
-        except Exception as e:
-            current_app.logger.error('Influxdb Error: {}'.format(e))
+        if client:
+            try:
+                client.write_points([{
+                    "measurement": "hails_status_changed",
+                    "tags": {
+                        "added_by": User.query.get(self.added_by).email,
+                        "operator": self.operateur.email,
+                        "zupc": taxi.ads.zupc.insee,
+                        "previous_status": old_status,
+                        "status": self._status
+                        },
+                    "time": datetime.utcnow().strftime('%Y%m%dT%H:%M:%SZ'),
+                    "fields": {
+                        "value": 1
+                    }
+                    }])
+            except Exception as e:
+                current_app.logger.error('Influxdb Error: {}'.format(e))
 
     def status_changed(self):
         self.last_status_change = datetime.now()
