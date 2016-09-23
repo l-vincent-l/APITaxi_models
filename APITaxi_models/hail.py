@@ -301,8 +301,12 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def manage_penalty(self, reporting_customer=False):
         customer = Customer.query.filter_by(id=self.customer_id,
                 moteur_id=self.added_by).first()
+        if customer.reprieve_end and customer.reprieve_begin:
+            previous_duration = customer.reprieve_end - customer.reprieve_begin
+        else:
+            previous_duration = timedelta()
         customer.reprieve_begin = datetime.now()
-        if not customer.reprieve_end:
+        if not customer.reprieve_end or customer.reprieve_end < datetime.now():
             if reporting_customer:
                 customer.reprieve_end = datetime.now() + timedelta(hours=2)
                 customer.ban_begin = datetime.now()
@@ -310,7 +314,6 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             else:
                 customer.reprieve_end = datetime.now() + timedelta(hours=4)
         else:
-            previous_duration = customer.reprieve_end - customer.reprieve_begin
             if reporting_customer:
                 customer.reprieve_end = datetime.now() + previous_duration * 8
             else:
