@@ -30,6 +30,7 @@ class ZUPC(db.Model, MarshalMixin, CacheableMixin):
     parent_id = Column(db.Integer, db.ForeignKey('ZUPC.id'))
     parent = db.relationship('ZUPC', remote_side=[id], lazy='joined')
     active = Column(db.Boolean, default=False)
+    max_distance = Column(db.Integer, nullable=True, default=-1, label="Max distance in meters")
     __geom = None
     __preped_geom = None
     __bounds = None
