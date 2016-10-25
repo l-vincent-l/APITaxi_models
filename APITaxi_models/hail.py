@@ -329,8 +329,10 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         return False
 
     def manage_penalty_taxi(self):
+        if not current_app.config['AUTOMATIC_PENALIZE_TAXI']:
+            return
         self.rating_ride_reason = 'manage_penalty_taxi'
-        self.rating_ride = 2
+        self.rating_ride = current_app.config['AUTOMATIC_RATING']
 
     def manage_penalty_customer(self, reporting_customer=False):
         customer = Customer.query.filter_by(id=self.customer_id,
