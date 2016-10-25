@@ -189,6 +189,29 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def validate_rating_taxi(self, key, value):
 #We need to restrict this to a subset of statuses
         assert 1 <= value <= 5, 'Rating value has to be 1 <= value <= 5'
+        initial_rating = self.rating_ride
+        if initial_rating == value:
+            return value
+        delta = relativedelta(months=-6)
+        min_date = datetime.now() + delta
+        nb_days = (datetime.now() - min_date).days
+        ratings ={i: [] for i in range(nb_days)}
+        ratings[0] = [value]
+        HailModel = self.__class__
+        for hail_ in HailModel.query.filter_by(taxi_id=self.taxi_id)\
+                    .filter(HailModel.creation_datetime >= min_date)\
+                    .filter(HailModel.rating_ride != None):
+            key = nb_days - (hail_.creation_datetime - min_date).days - 1
+            ratings[key].append(hail_.rating_ride)
+        #We want to fill the ratings when there is no value
+        ratings = {k: v+[4.5]*(3-len(v)) for k, v in ratings.iteritems()}
+        decay_factor = {nb_days-i-1:exp(-float(nb_days-i)/30.) for i in range(nb_days)}
+        total_rating = float(sum(map(lambda rs_f:
+                                     sum(map(lambda r: r*rs_f[1], rs_f[0])),
+                                     izip(ratings.values(), decay_factor.values()))))
+        total_factor = fsum(map(lambda k_v: k_v[1]*len(ratings[k_v[0]]),
+                                decay_factor.iteritems()))
+        self.taxi_relation.rating = total_rating / total_factor
         return value
 
     timeouts = {
@@ -308,7 +331,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def manage_penalty_taxi(self):
         if not current_app.config['AUTOMATIC_RATING_ACTIVATED']:
             return
-        self.rating_ride_reason = 'manage_penalty_taxi'
+        self.rating_ride_reason = 'automatic_rating'
         self.rating_ride = current_app.config['AUTOMATIC_RATING']
 
     def manage_penalty_customer(self, reporting_customer=False):
