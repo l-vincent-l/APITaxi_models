@@ -56,7 +56,7 @@ status_enum_list = [ 'emitted', 'received', 'sent_to_operator',
 
 rating_ride_reason_enum = ['ko', 'payment', 'courtesy', 'route', 'cleanliness',
                            'late', 'no_credit_card', 'bad_itinerary', 'dirty_taxi',
-                          'manage_penalty_taxi']
+                          'automatic_rating']
 reporting_customer_reason_enum = ['ko', 'payment', 'courtesy', 'route', 'cleanliness',
                                   'late', 'aggressive', 'no_show']
 incident_customer_reason_enum = ['',
@@ -145,7 +145,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         assert value is None or value in rating_ride_reason_enum,\
             'Bad rating_ride_reason\'s value. It can be: {}'.format(
                     rating_ride_reason_enum)
-        if current_user.id != self.added_by and value != 'manage_penalty_taxi':
+        if current_user.id != self.added_by and value != 'automatic_rating':
             raise RuntimeError()
         return value
 
@@ -329,9 +329,9 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         return False
 
     def manage_penalty_taxi(self):
-        if not current_app.config['AUTOMATIC_PENALIZE_TAXI']:
+        if not current_app.config['AUTOMATIC_RATING_ACTIVATED']:
             return
-        self.rating_ride_reason = 'manage_penalty_taxi'
+        self.rating_ride_reason = 'automatic_rating'
         self.rating_ride = current_app.config['AUTOMATIC_RATING']
 
     def manage_penalty_customer(self, reporting_customer=False):
