@@ -309,7 +309,6 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
     @status.setter
     def status(self, status):
         self.vehicle.description.status = status
-        self.last_update_at = datetime.now()
         if not self.current_hail_id:
             return
         new_status, new_hail_id = self.get_new_hail_status(
@@ -395,7 +394,6 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
             return
         description = self.vehicle.get_description(hail.operateur)
         description.status = next_status
-        self.last_update_at = datetime.now()
         RawTaxi.flush(self.id)
 
 
