@@ -96,7 +96,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                             backref="taxi", lazy="joined",
                             foreign_keys=taxi_id)
     _status = db.Column(db.Enum(*status_enum_list,
-        name='hail_status'), default='emitted', nullable=False, name='status')
+                        name='hail_status'),
+                        default='emitted', nullable=False, name='status')
     last_status_change = db.Column(db.DateTime)
     db.ForeignKeyConstraint(['operateur_id', 'customer_id'],
         ['customer.operateur_id', 'customer.id'],
@@ -134,7 +135,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
     def __init__(self, *args, **kwargs):
         self.id = str(get_short_uuid())
-        self.creation_datetime = datetime.now().isoformat()
+        self.creation_datetime = datetime.now()
         db.Model.__init__(self)
         HistoryMixin.__init__(self)
         super(self.__class__, self).__init__(**kwargs)
@@ -142,18 +143,12 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     @validates('rating_ride_reason')
     def validate_rating_ride_reason(self, key, value):
 #We need to restrict this to a subset of statuses
-        assert value is None or value in rating_ride_reason_enum,\
-            'Bad rating_ride_reason\'s value. It can be: {}'.format(
-                    rating_ride_reason_enum)
         if current_user.id != self.added_by and value != 'automatic_rating':
             raise RuntimeError()
         return value
 
     @validates('incident_customer_reason')
     def validate_incident_customer_reason(self, key, value):
-        assert value is None or value in incident_customer_reason_enum,\
-            'Bad rating_ride_reason\'s value. It can be: {}'.format(
-                    incident_customer_reason_enum)
         if current_user.id != self.added_by:
             raise RuntimeError()
         self.status = 'incident_customer'
@@ -161,9 +156,6 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
     @validates('incident_taxi_reason')
     def validate_incident_taxi_reason(self, key, value):
-        assert value is None or value in incident_taxi_reason_enum,\
-            'Bad rating_ride_reason\'s value. It can be: {}'.format(
-                    incident_taxi_reason_enum)
         if current_user.id != self.operateur_id:
             raise RuntimeError()
         self.status = 'incident_taxi'
@@ -171,9 +163,6 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
     @validates('reporting_customer_reason')
     def validate_reporting_customer_reason(self, key, value):
-        assert value is None or value in reporting_customer_reason_enum,\
-            'Bad reporting_customer_reason\'s value. It can be: {}'.format(
-                    reporting_customer_reason_enum)
         if current_user.id != self.operateur_id:
             raise RuntimeError()
         return value
