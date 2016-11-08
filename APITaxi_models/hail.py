@@ -134,7 +134,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
     def __init__(self, *args, **kwargs):
         self.id = str(get_short_uuid())
-        self.creation_datetime = datetime.now().isoformat()
+        self.creation_datetime = datetime.now()
         db.Model.__init__(self)
         HistoryMixin.__init__(self)
         super(self.__class__, self).__init__(**kwargs)
