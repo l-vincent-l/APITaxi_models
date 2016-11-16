@@ -272,7 +272,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                 self._status, value))
         old_status_index = status_enum_list.index(value) if value else 0
         new_status_index = status_enum_list.index(self._status) if self._status else 0
-        if not self._status or old_status_index > new_status_index:
+        if not self._status or old_status_index > new_status_index \
+           or value.startswith('incident') or value.startswith('reporting'):
             self._status = value
         if self._status in ('timeout_customer', 'declined_by_customer', 
                             'incident_customer'):
