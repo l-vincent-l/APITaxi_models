@@ -464,6 +464,7 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
                 lambda o, f: o.get('vehicle_description_{}'.format(f)), t)
         return {
             "id": taxi_id,
+            "internal_id": t['vehicle_description_internal_id'],
             "operator": t['u_email'],
             "position": taxi_redis.coords if taxi_redis else position,
             "vehicle": {
