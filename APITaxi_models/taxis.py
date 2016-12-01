@@ -297,6 +297,7 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
                     nullable=True)
     current_hail = db.relationship('Hail', backref='hail', post_update=True,
                                   foreign_keys=[current_hail_id])
+    internal_id = db.Column(db.String, nullable=True)
 
     _ACTIVITY_TIMEOUT = 15*60 #Used for dash
 
@@ -464,6 +465,7 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
                 lambda o, f: o.get('vehicle_description_{}'.format(f)), t)
         return {
             "id": taxi_id,
+            "internal_id": t['taxi_internal_id'],
             "operator": t['u_email'],
             "position": taxi_redis.coords if taxi_redis else position,
             "vehicle": {
