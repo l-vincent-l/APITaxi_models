@@ -156,6 +156,7 @@ class VehicleDescription(HistoryMixin, CacheableMixin, db.Model, AsDictMixin):
     nb_seats = Column(db.Integer, name='nb_seats',
             description=u'Nombre de places assises disponibles pour les voyageurs',
             label=u'Nombre de places')
+    internal_id = Column(db.String, nullable=True)
     __table_args__ = (db.UniqueConstraint('vehicle_id', 'added_by',
         name="_uq_vehicle_description"),)
 
@@ -310,6 +311,10 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
     @property
     def type_(self):
         return self.description.type_ if self.description else None
+
+    @property
+    def internal_id(self):
+        return self.description.internal_id if self.description else None
 
     def __repr__(self):
         return '<Vehicle %r>' % unicode(self.id)
