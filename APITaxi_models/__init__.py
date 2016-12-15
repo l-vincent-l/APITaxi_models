@@ -56,7 +56,7 @@ else:
                 return validator(value)
             elif _class is db.Enum:
                 assert value in inst.property.columns[0].type._valid_lookup,\
-                    "Field {}: {} is not in {}".format(
+                    "Error with field {}: {} is not in {}".format(
                         inst.property.columns[0].name,
                         value,
                         inst.property.columns[0].type._valid_lookup.keys()

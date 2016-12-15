@@ -258,7 +258,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     @status.setter
     def status(self, value):
         old_status = self._status
-        assert value in status_enum_list
+        assert value in status_enum_list, "Invalid status, {} is not in {}".format(value, status_enum_list)
         if value == self._status:
             return True
         roles_accepted = self.roles_accepted.get(value, None)
