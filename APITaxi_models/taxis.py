@@ -51,11 +51,6 @@ class ADS(HistoryMixin, db.Model, AsDictMixin, FilterOr404Mixin):
     def zupc(self):
         return ZUPC.cache.get(self.zupc_id)
 
-    @validates('owner_type')
-    def validate_owner_type(self, key, value):
-        assert value in owner_type_enum
-        return value
-
     @classmethod
     def can_be_listed_by(cls, user):
         return super(ADS, cls).can_be_listed_by(user) or user.has_role('prefecture')
