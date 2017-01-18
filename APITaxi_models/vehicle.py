@@ -249,6 +249,8 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
                         "constructor": fields.String(attribute="description.constructor")})
         if not filter_id:
             return_["id"] = fields.Integer()
+        if "internal_id" in return_.keys():
+            del return_["internal_id"]
         return return_
 
 
