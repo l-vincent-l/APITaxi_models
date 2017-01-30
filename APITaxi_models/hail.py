@@ -8,7 +8,7 @@ from APITaxi_utils import fields, influx_db
 from APITaxi_utils.mixins import GetOr404Mixin, HistoryMixin, AsDictMixin
 from APITaxi_utils.caching import CacheableMixin, query_callable
 from APITaxi_utils.get_short_uuid import get_short_uuid
-from . import db
+from . import db, Customer
 from .security import User
 from flask_principal import RoleNeed, Permission
 from sqlalchemy.orm import validates, joinedload, lazyload
@@ -21,28 +21,6 @@ from sqlalchemy.sql.expression import text
 from dateutil.relativedelta import relativedelta
 from math import exp, fsum
 from itertools import izip
-
-
-class Customer(HistoryMixin, db.Model, AsDictMixin):
-    @declared_attr
-    def added_by(cls):
-        return db.Column(db.Integer,db.ForeignKey('user.id'))
-    id = db.Column(db.String, primary_key=True)
-    moteur_id = db.Column(db.Integer, db.ForeignKey('user.id'),
-                             primary_key=True)
-    phone_number = db.Column(db.String, nullable=True)
-    reprieve_begin = db.Column(db.DateTime, nullable=True)
-    reprieve_end = db.Column(db.DateTime, nullable=True)
-    ban_begin = db.Column(db.DateTime, nullable=True)
-    ban_end = db.Column(db.DateTime, nullable=True)
-
-    def __init__(self, customer_id, *args, **kwargs):
-        db.Model.__init__(self)
-        HistoryMixin.__init__(self)
-        super(self.__class__, self).__init__(**kwargs)
-        self.id = customer_id
-        self.moteur_id = current_user.id
-        self.added_via = 'api'
 
 new_version_statuses = ['finished', 'customer_on_board',
                         'timeout_accepted_by_customer']
