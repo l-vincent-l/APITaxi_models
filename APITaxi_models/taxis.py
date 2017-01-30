@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from . import db
-from .vehicle import Vehicle, VehicleDescription, Model, Constructor
-from .administrative import ZUPC, Departement
+from . import (db, ZUPC, Departement, ADS, Driver, Vehicle,
+               VehicleDescription, Model, Constructor)
 from .security import User
 from APITaxi_utils import fields, get_columns_names
 from APITaxi_utils.mixins import (GetOr404Mixin, AsDictMixin, HistoryMixin,
@@ -18,111 +17,6 @@ from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
 from datetime import datetime
 from itertools import groupby, izip
-
-
-owner_type_enum = ['company', 'individual']
-class ADS(HistoryMixin, db.Model, AsDictMixin, FilterOr404Mixin):
-    @declared_attr
-    def added_by(cls):
-        return Column(db.Integer,db.ForeignKey('user.id'))
-    def __init__(self, licence_plate=None):
-        db.Model.__init__(self)
-        HistoryMixin.__init__(self)
-        if licence_plate:
-            self.vehicle = licence_plate
-
-    public_fields = set(['numero', 'insee'])
-    id = Column(db.Integer, primary_key=True)
-    numero = Column(db.String, label=u'Numéro',
-            description=u'Numéro de l\'ADS')
-    doublage = Column(db.Boolean, label=u'Doublage', default=False,
-            nullable=True, description=u'L\'ADS est elle doublée ?')
-    insee = Column(db.String, label=u'Code INSEE de la commune d\'attribution',
-                   description=u'Code INSEE de la commune d\'attribution')
-    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
-    _vehicle = db.relationship('Vehicle', lazy='joined')
-    owner_type = Column(Enum(*owner_type_enum, name='owner_type_enum'),
-            label=u'Type Propriétaire')
-    owner_name = Column(db.String, label=u'Nom du propriétaire')
-    category = Column(db.String, label=u'Catégorie de l\'ADS')
-    zupc_id = db.Column(db.Integer, db.ForeignKey('ZUPC.id'), nullable=True)
-
-    @property
-    def zupc(self):
-        return ZUPC.cache.get(self.zupc_id)
-
-    @classmethod
-    def can_be_listed_by(cls, user):
-        return super(ADS, cls).can_be_listed_by(user) or user.has_role('prefecture')
-
-    @classmethod
-    def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None):
-        if level >=2:
-            return {}
-        return_ = super(ADS, cls).marshall_obj(show_all, filter_id,
-                level=level+1, api=api)
-        return_['vehicle_id'] = fields.Integer()
-        return return_
-
-    @property
-    def vehicle(self):
-        return vehicle.Vehicle.query.get(self.vehicle_id)
-
-    @vehicle.setter
-    def vehicle(self, vehicle):
-        if isinstance(vehicle, string_types):
-            self.__vehicle = Vehicle(vehicle)
-        else:
-            self.__vehicle = Vehicle(vehicle.licence_plate)
-
-
-    def __repr__(self):
-        return '<ADS %r>' % unicode(self.id)
-
-    def __eq__(self, other):
-        return self.__repr__() == other.__repr__()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
-class Driver(HistoryMixin, db.Model, AsDictMixin, FilterOr404Mixin):
-    public_relations = ['departement']
-    @declared_attr
-    def added_by(cls):
-        return Column(db.Integer,db.ForeignKey('user.id'))
-    def __init__(self):
-        db.Model.__init__(self)
-        HistoryMixin.__init__(self)
-    id = Column(db.Integer, primary_key=True)
-    last_name = Column(db.String(255), label='Nom', description=u'Nom du conducteur')
-    first_name = Column(db.String(255), label=u'Prénom',
-            description=u'Prénom du conducteur')
-    birth_date = Column(db.Date(),
-        label=u'Date de naissance (format année-mois-jour)',
-        description=u'Date de naissance (format année-mois-jour)')
-    professional_licence = Column(db.String(),
-            label=u'Numéro de la carte professionnelle',
-            description=u'Numéro de la carte professionnelle')
-
-    departement_id = Column(db.Integer, db.ForeignKey('departement.id'),
-            nullable=True)
-    departement = db.relationship('Departement', backref='vehicle',
-            lazy="joined")
-
-
-    @classmethod
-    def can_be_listed_by(cls, user):
-        return super(Driver, cls).can_be_listed_by(user) or user.has_role('prefecture')
-
-    def __eq__(self, other):
-        return self.__repr__() == other.__repr__()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __repr__(self):
-        return '<drivers %r>' % unicode(self.id)
 
 @with_pattern(r'\d+(\.\d+)?')
 def parse_number(str_):

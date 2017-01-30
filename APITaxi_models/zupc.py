@@ -7,13 +7,6 @@ from geoalchemy2 import Geography
 from geoalchemy2.shape import to_shape
 from shapely.prepared import prep
 
-class Departement(db.Model, MarshalMixin, FilterOr404Mixin):
-    id = Column(db.Integer, primary_key=True)
-    nom = Column(db.String(255), label='Nom')
-    numero = Column(db.String(3), label='Numero')
-
-    def __str__(self):
-        return '%s' % (self.numero)
 
 class ZUPC(db.Model, MarshalMixin, CacheableMixin):
     cache_label = 'zupc'

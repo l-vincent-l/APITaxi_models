@@ -64,3 +64,15 @@ else:
                 return value
             else:
                 return value
+
+    from .departement import Departement
+    from .zupc import ZUPC
+    from .driver import Driver
+    from .ads import ADS
+    from .customer import Customer
+    from .constructor import Constructor
+    from .model import Model
+    from .vehicle_description import VehicleDescription
+    from .vehicle import Vehicle
+    from .taxis import Taxi, RawTaxi, TaxiRedis
+    from .hail import Hail, HailLog
