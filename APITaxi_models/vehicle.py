@@ -45,11 +45,9 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
             del return_["internal_id"]
         return return_
 
-
     @property
     def description(self):
         return self.get_description()
-
 
     def get_description(self, user=None):
         if not user:
@@ -60,55 +58,19 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
                 returned_description = description
         return returned_description
 
-
-    @property
-    def model(self):
-        return self.description.model if self.description else None
-
-
-    @property
-    def constructor(self):
-        return self.description.constructor.name if self.description else None
-
-    @property
-    def model_year(self):
-        return self.description.model_year if self.description else None
-
-    @property
-    def engine(self):
-        return self.description.engine if self.description else None
-
-    @property
-    def horse_power(self):
-        return self.description.horse_power if self.description else None
-
-    @property
-    def relais(self):
-        return self.description.relais if self.description else None
-
-    @property
-    def horodateur(self):
-        return self.description.horodateur if self.description else None
-
-    @property
-    def taximetre(self):
-        return self.description.taximetre if self.description else None
-
-    @property
-    def date_dernier_ct(self):
-        return self.description.date_dernier_ct if self.description else None
-
-    @property
-    def date_validite_ct(self):
-        return self.description.date_validite_ct if self.description else None
-
-    @property
-    def type_(self):
-        return self.description.type_ if self.description else None
-
-    @property
-    def internal_id(self):
-        return self.description.internal_id if self.description else None
+    def __getattr__(self, attrname):
+        try:
+            return db.Model.__getattribute__(self, attrname)
+        except AttributeError as e:
+            description = self.description
+            if description is None:
+                return None
+            if attrname in VehicleDescription.__table__.columns:
+                try:
+                    return db.Model.__getattribute__(description, attrname)
+                except AttributeError:
+                    pass
+            raise e
 
     def __repr__(self):
         return '<Vehicle %r>' % unicode(self.id)
