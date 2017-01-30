@@ -13,8 +13,8 @@ from itertools import compress
 
 status_vehicle_description_enum = ['free', 'answering', 'occupied', 'oncoming', 'off']
 @unique_constructor(db.session,
-           lambda vehicle_id, added_by: '{}, {}'.format(vehicle_id, added_by),
-           lambda query, vehicle_id, added_by:\
+           lambda vehicle_id, added_by, **kw: '{}, {}'.format(vehicle_id, added_by),
+           lambda query, vehicle_id, added_by, **kw:\
                    query.filter(and_(\
                        VehicleDescription.vehicle_id == vehicle_id,
                        VehicleDescription.added_by == added_by)))
@@ -24,12 +24,11 @@ class VehicleDescription(HistoryMixin, CacheableMixin, db.Model, AsDictMixin):
         return Column(db.Integer,db.ForeignKey('user.id'))
     cache_label = 'taxis'
     query_class = query_callable()
+    _additionnal_keys = ['constructor', 'model']
 
-    def __init__(self, vehicle_id, added_by):
-        db.Model.__init__(self)
+    def __init__(self, **kwargs):
+        db.Model.__init__(self, **kwargs)
         HistoryMixin.__init__(self)
-        self.vehicle_id = vehicle_id
-        self.added_by = added_by
 
     id = Column(db.Integer, primary_key=True)
     model_id = Column(db.Integer, db.ForeignKey("model.id"))

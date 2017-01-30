@@ -24,7 +24,7 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
         if isinstance(licence_plate, self.__class__):
             self.licence_plate = licence_plate.licence_plate
         else:
-            self.licence_plate
+            self.licence_plate = licence_plate
 
     @classmethod
     def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None):
