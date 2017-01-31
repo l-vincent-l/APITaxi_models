@@ -52,6 +52,8 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
     def get_description(self, user=None):
         if not user:
             user = current_user
+        if user.is_anonymous:
+            return None
         returned_description = None
         for description in self.descriptions:
             if description.added_by == user.id:
@@ -62,10 +64,14 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
         try:
             return db.Model.__getattribute__(self, attrname)
         except AttributeError as e:
-            description = self.description
+            try:
+                description = self.description
+            except AttributeError as e2:
+                raise e2
             if description is None:
                 return None
-            if attrname in VehicleDescription.__table__.columns:
+            if attrname in VehicleDescription.__table__.columns or\
+               attrname in VehicleDescription._additionnal_keys:
                 try:
                     return db.Model.__getattribute__(description, attrname)
                 except AttributeError:
