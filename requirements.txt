@@ -3,6 +3,7 @@ Flask-Login==0.3.2
 Flask-Principal==0.4.0
 Flask-Security==1.7.5
 Flask-SQLAlchemy==2.1
+parse==1.6.6
 GeoAlchemy2==0.3.0
 Shapely==1.5.16
 SQLAlchemy==1.1.3
