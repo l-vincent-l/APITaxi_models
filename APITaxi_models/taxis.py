@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from . import (db, ZUPC, Departement, ADS, Driver, Vehicle,
+from . import (db, Departement, ADS, Driver, Vehicle,
                VehicleDescription, Model, Constructor)
 from .security import User
 from APITaxi_utils import fields, get_columns_names

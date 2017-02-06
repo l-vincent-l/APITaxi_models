@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from . import db, Driver
+from . import db, Driver, ZUPC
 from APITaxi_utils.mixins import AsDictMixin, HistoryMixin, FilterOr404Mixin
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy_defaults import Column
