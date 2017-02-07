@@ -11,7 +11,7 @@ except ImportError:
     db = None
 else:
     from sqlalchemy import event
-    import datetime, aniso8601
+    import datetime, aniso8601, functools
     db = SQLAlchemy(session_options={"autoflush":False})
 
 
@@ -23,18 +23,29 @@ else:
         return value
 
     def validate_datetime(value):
-         assert value is None or isinstance(value, datetime.datetime)
-         return value
+        if value is None:
+            return value
+        elif isinstance(value, datetime.datetime):
+            return value
+        else:
+            try:
+                aniso8601.parse_datetime(value, delimiter='T')
+            except ValueError:
+                raise AssertionError("{} is not a Datetime".format(value))
+            return value
 
     def validate_date(value):
         if value is None:
             return value
-        if isinstance(value, datetime.date):
+        elif isinstance(value, datetime.date):
             return value
-        try:
-            return aniso8601.parse_date(value)
-        except ValueError:
-            raise AssertionError("{} is not a Date".format(value))
+        else:
+            func = validate_datetime if "T" in value else aniso8601.parse_date
+            try:
+                func(value)
+            except ValueError:
+                raise AssertionError("{} is not a Date".format(value))
+            return value
 
 
     validators = {
