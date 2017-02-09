@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from . import db, Driver, ZUPC
+from . import db, Driver, ZUPC, Vehicle
 from APITaxi_utils.mixins import AsDictMixin, HistoryMixin, FilterOr404Mixin
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy_defaults import Column
@@ -8,7 +8,17 @@ from APITaxi_utils import fields
 
 owner_type_enum = ['company', 'individual']
 class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
+
     def __init__(self, *args, **kwargs):
+        if "vehicle_id" not in kwargs or kwargs.get("vehicle_id") == 0:
+            kwargs["vehicle_id"] = None
+        if kwargs["vehicle_id"] and not Vehicle.query.get(kwargs["vehicle_id"]):
+            raise KeyError("Unable to find a vehicle with the id: {}".format(
+                kwargs["vehicle_id"]))
+        zupc = ZUPC.query.filter_by(insee=kwargs['insee']).first()
+        if zupc is None:
+            raise KeyError("Unable to find a ZUPC for insee: {}".format(kwargs['insee']))
+        kwargs['zupc_id'] = zupc.parent_id
         db.Model.__init__(self, *args, **kwargs)
         HistoryMixin.__init__(self)
 
