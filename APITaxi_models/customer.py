@@ -19,10 +19,7 @@ class Customer(HistoryMixin, db.Model, AsDictMixin):
     ban_begin = db.Column(db.DateTime, nullable=True)
     ban_end = db.Column(db.DateTime, nullable=True)
 
-    def __init__(self, customer_id, *args, **kwargs):
-        db.Model.__init__(self)
+    def __init__(self, *args, **kwargs):
+        db.Model.__init__(self, *args, **kwargs)
         HistoryMixin.__init__(self)
-        super(self.__class__, self).__init__(**kwargs)
-        self.id = customer_id
-        self.moteur_id = current_user.id
         self.added_via = 'api'
