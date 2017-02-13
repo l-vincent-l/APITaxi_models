@@ -47,6 +47,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def added_by(cls):
         return db.Column(db.Integer,db.ForeignKey('user.id'))
 
+
     cache_label = 'hails'
     query_class = query_callable()
     public_fields = ['creation_datetime', 'customer_address', 'customer_id',
@@ -56,7 +57,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         'reporting_customer_reason', 'status', 'taxi', 'taxi_phone_number']
 
     id = db.Column(db.String, primary_key=True)
-    creation_datetime = db.Column(db.DateTime, nullable=False)
+    creation_datetime = db.Column(db.DateTime, nullable=False,
+                                 default=datetime.now())
     operateur_id = db.Column(db.Integer, db.ForeignKey('user.id'),
             nullable=True)
     _operateur = db.relationship('User', 
@@ -76,7 +78,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     _status = db.Column(db.Enum(*status_enum_list,
                         name='hail_status'),
                         default='emitted', nullable=False, name='status')
-    last_status_change = db.Column(db.DateTime)
+    last_status_change = db.Column(db.DateTime, default=datetime.now())
     db.ForeignKeyConstraint(['operateur_id', 'customer_id'],
         ['customer.operateur_id', 'customer.id'],
         )
@@ -112,11 +114,32 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
 
     def __init__(self, *args, **kwargs):
-        self.id = str(get_short_uuid())
-        self.creation_datetime = datetime.now()
-        db.Model.__init__(self)
+        self.id = get_short_uuid()
+        status = kwargs.pop('status')
+        self.taxi_id = kwargs['taxi_id']
+        self.operateur_id = kwargs['operateur_id']
         HistoryMixin.__init__(self)
-        super(self.__class__, self).__init__(**kwargs)
+        customer = Customer.query.filter_by(id=kwargs['customer_id'],
+                moteur_id=current_user.id).first()
+        if not customer:
+            customer = Customer(id=kwargs['customer_id'],
+                                phone_number=kwargs['customer_phone_number'],
+                                moteur_id=current_user.id)
+            db.session.add(customer)
+            db.session.commit()
+        self.customer_id = customer.id
+        db.Model.__init__(self, *args, **kwargs)
+        if customer.ban_end and datetime.now() < customer.ban_end:
+            self.status = 'customer_banned'
+            db.session.add(self)
+            abort(403, message='Customer is banned')
+        db.session.add(self)
+        db.session.commit()
+        taxi = TaxiM.query.get(kwargs['taxi_id'])
+        taxi.current_hail_id = self.id
+        db.session.add(taxi)
+        self.status = status
+
 
     @validates('rating_ride_reason')
     def validate_rating_ride_reason(self, key, value):
@@ -124,6 +147,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         if current_user.id != self.added_by and value != 'automatic_rating':
             raise RuntimeError()
         return value
+
 
     @validates('incident_customer_reason')
     def validate_incident_customer_reason(self, key, value):
