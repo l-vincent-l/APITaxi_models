@@ -55,7 +55,7 @@ class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
             return {}
         return_ = super(ADS, cls).marshall_obj(show_all, filter_id,
                 level=level+1, api=api)
-        return_['vehicle_id'] = fields.Integer()
+        return_['vehicle_id'] = fields.Integer(column=cls.__table__.columns['vehicle_id'])
         return return_
 
     @property

@@ -55,8 +55,20 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
         if level == 2:
             return {}
         r = super(Driver, cls).marshall_obj(show_all, filter_id, level+1, api)
-        r['departement'] = fields.Nested(api.model("departement", Departement.marshall_obj(
-            show_all, filter_id, level=level+1, api=api)))
+        departement_model = api.model("departement",
+                                      Departement.marshall_obj(show_all,
+                                                               filter_id,
+                                                               level=level+1,
+                                                               api=api)
+        )
+        departement_model.__schema__ = {
+            u'type': 'object',
+            u'anyOf': [
+                {'nom': {u'description': '', u'type': u'string'}},
+                {'numero': {u'description': '', u'type': u'string'}}
+            ]
+        }
+        r['departement'] = fields.Nested(departement_model)
         return r
 
     def __eq__(self, other):
