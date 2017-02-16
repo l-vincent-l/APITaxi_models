@@ -141,6 +141,10 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         self.status = status
 
 
+    @classmethod
+    def to_exclude(cls):
+        return HistoryMixin.to_exclude() + ['creation_datetime']
+
     @validates('rating_ride_reason')
     def validate_rating_ride_reason(self, key, value):
 #We need to restrict this to a subset of statuses
