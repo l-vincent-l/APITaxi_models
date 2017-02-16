@@ -9,8 +9,8 @@ from flask_login import current_user
 from flask_restplus import abort
 
 @unique_constructor(db.session,
-                    lambda licence_plate: licence_plate,
-                    lambda query, licence_plate: query.filter(Vehicle.licence_plate == licence_plate))
+                    lambda licence_plate, *args, **kwargs: licence_plate,
+                    lambda query, licence_plate, *args, **kwargs: query.filter(Vehicle.licence_plate == licence_plate))
 class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mixin):
     cache_label = 'taxis'
     query_class = query_callable()
@@ -21,25 +21,33 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
     descriptions = db.relationship("VehicleDescription",
             lazy='joined')
 
-    def __init__(self, licence_plate=None):
-        if isinstance(licence_plate, self.__class__):
-            self.licence_plate = licence_plate.licence_plate
-        else:
-            self.licence_plate = licence_plate
+    def __init__(self, *args, **kwargs):
+        from . import Taxi, RawTaxi
+        db.Model.__init__(self, licence_plate=kwargs['licence_plate'])
+        db.session.add(self)
+        db.session.commit()
+        del kwargs['licence_plate']
+        desc = VehicleDescription(vehicle_id=self.id, status='off', **kwargs)
+        db.session.add(desc)
+        for taxi in Taxi.query.filter_by(vehicle_id=self.id).all():
+            RawTaxi.flush(taxi.id)
+        db.session.commit()
 
     @classmethod
-    def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None):
+    def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None,
+                    add_description=True):
         if level >=2:
             return {}
         return_ = super(Vehicle, cls).marshall_obj(show_all, filter_id,
                 level=level+1, api=api)
         dict_description = VehicleDescription.marshall_obj(
                 show_all, filter_id, level=level+1, api=api)
-        for k, v in dict_description.items():
-            dict_description[k].attribute = 'description.{}'.format(k)
+        dict_description.update({"model": fields.String(attribute="model"),
+                        "constructor": fields.String(attribute="constructor")})
+        if add_description:
+            for k, v in dict_description.items():
+                dict_description[k].attribute = 'description.{}'.format(k)
         return_.update(dict_description)
-        return_.update({"model": fields.String(attribute="description.model"),
-                        "constructor": fields.String(attribute="description.constructor")})
         if not filter_id:
             return_["id"] = fields.Integer()
         if "internal_id" in return_.keys():
@@ -55,29 +63,23 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
             user = current_user
         if user.is_anonymous:
             return None
-        returned_description = None
         for description in self.descriptions:
             if description.added_by == user.id:
-                returned_description = description
-        return returned_description
+                return description
+        return None
+
 
     def __getattr__(self, attrname):
-        try:
-            return db.Model.__getattribute__(self, attrname)
-        except AttributeError as e:
+        if attrname in VehicleDescription.__table__.columns or\
+           attrname in VehicleDescription._additionnal_keys and\
+           attrname not in self.__table__.columns:
+            description = self.description
             try:
-                description = self.description
-            except AttributeError as e2:
-                raise e2
-            if description is None:
-                return None
-            if attrname in VehicleDescription.__table__.columns or\
-               attrname in VehicleDescription._additionnal_keys:
-                try:
-                    return db.Model.__getattribute__(description, attrname)
-                except AttributeError:
-                    pass
-            raise e
+                return getattr(description, attrname)
+            except AttributeError as e:
+                pass
+        return db.Model.__getattribute__(self, attrname)
+
 
     @classmethod
     def filter_by_or_404(cls, licence_plate):
