@@ -6,6 +6,7 @@ from APITaxi_utils import fields
 from APITaxi_utils.caching import CacheableMixin, query_callable
 from sqlalchemy_defaults import Column
 from flask_login import current_user
+from flask_restplus import abort
 
 @unique_constructor(db.session,
                     lambda licence_plate: licence_plate,
@@ -77,6 +78,13 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
                 except AttributeError:
                     pass
             raise e
+
+    @classmethod
+    def filter_by_or_404(cls, licence_plate):
+        r = super(Vehicle, cls).filter_by_or_404(licence_plate=licence_plate)
+        if r.description is None:
+            abort(404, message="This vehicle was not added by this user")
+        return r
 
     def __repr__(self):
         return '<Vehicle %r>' % unicode(self.id)
