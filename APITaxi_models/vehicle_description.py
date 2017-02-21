@@ -8,16 +8,17 @@ from sqlalchemy.types import Enum
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy import UniqueConstraint, and_
 from flask import current_app
+from flask_login import current_user
 from time import time
 from itertools import compress
 
 status_vehicle_description_enum = ['free', 'answering', 'occupied', 'oncoming', 'off']
 @unique_constructor(db.session,
-           lambda vehicle_id, added_by, **kw: '{}, {}'.format(vehicle_id, added_by),
-           lambda query, vehicle_id, added_by, **kw:\
+           lambda vehicle_id, **kw: '{}, {}'.format(vehicle_id, current_user.id),
+           lambda query, vehicle_id, **kw:\
                    query.filter(and_(\
                        VehicleDescription.vehicle_id == vehicle_id,
-                       VehicleDescription.added_by == added_by)))
+                       VehicleDescription.added_by == current_user.id)))
 class VehicleDescription(HistoryMixin, CacheableMixin, db.Model, AsDictMixin):
     @declared_attr
     def added_by(cls):
@@ -26,8 +27,9 @@ class VehicleDescription(HistoryMixin, CacheableMixin, db.Model, AsDictMixin):
     query_class = query_callable()
     _additionnal_keys = ['constructor', 'model']
 
-    def __init__(self, **kwargs):
-        db.Model.__init__(self, **kwargs)
+    def __init__(self, *args, **kwargs):
+        self.added_by = current_user.id
+        db.Model.__init__(self, *args, **kwargs)
         HistoryMixin.__init__(self)
 
     id = Column(db.Integer, primary_key=True)
