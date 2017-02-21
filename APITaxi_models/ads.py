@@ -21,6 +21,15 @@ class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
         kwargs['zupc_id'] = zupc.parent_id
         db.Model.__init__(self, *args, **kwargs)
         HistoryMixin.__init__(self)
+        db.session.add(self)
+        db.session.commit()
+        cur = db.session.connection().connection.cursor()
+        cur.execute(""" UPDATE taxi set ads_id = %s WHERE ads_id IN (
+                                SELECT id FROM "ADS"  WHERE numero = %s
+                                AND insee = %s)
+                        """, (self.id, self.numero, self.insee)
+        )
+        db.session.commit()
 
     @declared_attr
     def added_by(cls):
