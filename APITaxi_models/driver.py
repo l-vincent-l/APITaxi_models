@@ -32,6 +32,17 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
     def __init__(self, *args, **kwargs):
         db.Model.__init__(self, *args, **kwargs)
         HistoryMixin.__init__(self)
+        db.session.add(self)
+        db.session.commit()
+        cur = db.session.connection().connection.cursor()
+        cur.execute("""
+                UPDATE taxi set driver_id = %s WHERE driver_id IN (
+                    SELECT id FROM driver WHERE professional_licence = %s
+                    AND departement_id = %s
+                )""",
+                (self.id, self.professional_licence, self.departement_id)
+            )
+        db.session.commit()
 
     @property
     def departement(self):
@@ -39,9 +50,9 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
 
     @departement.setter
     def departement(self, kwargs):
-        if "nom" in kwargs:
+        if "nom" in kwargs and kwargs['nom'] is not None:
             self.__departement = Departement.filter_by_or_404(nom=kwargs["nom"])
-        elif "numero" in kwargs:
+        elif "numero" in kwargs and kwargs['numero'] is not None:
             self.__departement = Departement.filter_by_or_404(numero=kwargs["numero"])
         else:
             abort(404, message="Unable to find departement: {}".format(kwargs))
