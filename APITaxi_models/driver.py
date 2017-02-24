@@ -51,7 +51,7 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
     @departement.setter
     def departement(self, kwargs):
         if "nom" in kwargs and kwargs['nom'] is not None:
-            self.__departement = Departement.filter_by_or_404(nom=kwargs["nom"])
+            self.__departement = Departement.filter_by_or_404(Departement.nom.ilike(kwargs["nom"]))
         elif "numero" in kwargs and kwargs['numero'] is not None:
             self.__departement = Departement.filter_by_or_404(numero=kwargs["numero"])
         else:
