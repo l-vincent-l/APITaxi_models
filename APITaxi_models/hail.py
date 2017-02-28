@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from .taxis import Taxi as TaxiM
+from .taxis import Taxi as TaxiM, RawTaxi, TaxiRedis
 from flask_security import login_required, roles_accepted,\
         roles_accepted, current_user
 from flask_restplus import abort
@@ -8,11 +8,11 @@ from APITaxi_utils import fields, influx_db
 from APITaxi_utils.mixins import GetOr404Mixin, HistoryMixin, AsDictMixin
 from APITaxi_utils.caching import CacheableMixin, query_callable
 from APITaxi_utils.get_short_uuid import get_short_uuid
-from . import db, Customer
+from . import db, Customer, security
 from .security import User
 from flask_principal import RoleNeed, Permission
 from sqlalchemy.orm import validates, joinedload, lazyload
-from flask import g, current_app
+from flask import g, current_app, request
 from sqlalchemy.ext.declarative import declared_attr
 from functools import wraps
 from datetime import datetime, timedelta
@@ -116,9 +116,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def __init__(self, *args, **kwargs):
         self.id = get_short_uuid()
         status = kwargs.pop('status')
-        self.taxi_id = kwargs['taxi_id']
-        self.operateur_id = kwargs['operateur_id']
         HistoryMixin.__init__(self)
+
         customer = Customer.query.filter_by(id=kwargs['customer_id'],
                 moteur_id=current_user.id).first()
         if not customer:
@@ -129,16 +128,33 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             db.session.commit()
         self.customer_id = customer.id
         db.Model.__init__(self, *args, **kwargs)
+
         if customer.ban_end and datetime.now() < customer.ban_end:
             self.status = 'customer_banned'
             db.session.add(self)
             abort(403, message='Customer is banned')
+
+        descriptions = RawTaxi.get((kwargs['taxi_id'],), self.operateur_id)
+        if len(descriptions) == 0 or len(descriptions[0]) == 0:
+            g.hail_log = HailLog('POST', None, request.data)
+            abort(404, message='Unable to find taxi {} of {}'.format(
+                kwargs['taxi_id'], kwargs['operateur']))
+        if descriptions[0][0]['vehicle_description_status'] != 'free' or\
+                not TaxiRedis(kwargs['taxi_id']).is_fresh(kwargs['operateur']):
+            g.hail_log = HailLog('POST', None, request.data)
+            abort(403, message="The taxi is not available")
+        taxi_pos = current_app.extensions['redis'].geopos(
+            current_app.config['REDIS_GEOINDEX'],
+            '{}:{}'.format(kwargs['taxi_id'], self.operateur.email))
+        if taxi_pos:
+            self.initial_taxi_lat, self.initial_taxi_lon = taxi_pos[0]
         db.session.add(self)
         db.session.commit()
         taxi = TaxiM.query.get(kwargs['taxi_id'])
         taxi.current_hail_id = self.id
         db.session.add(taxi)
         self.status = status
+        self.ads_insee = descriptions[0][0]['ads_insee']
 
 
     @classmethod
@@ -372,6 +388,14 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     @property
     def operateur(self):
         return User.query.get(self.operateur_id)
+
+    @operateur.setter
+    def operateur(self, value):
+        operateur = security.User.filter_by_or_404(
+                email=value,
+                message='Unable to find the taxi\'s operateur')
+        self.operateur_id = operateur.id
+
 
     @classmethod
     def get_or_404(cls, hail_id):
