@@ -218,6 +218,16 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
     def status(self):
         return self.vehicle.description.status
 
+    @property
+    def internal_id(self):
+        return self.description.internal_id
+
+    @internal_id.setter
+    def internal_id(self, value):
+        self.vehicle.internal_id = value
+        RawTaxi.flush(self.id)
+        return value
+
 
     @status.setter
     def status(self, status):
