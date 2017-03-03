@@ -11,7 +11,7 @@ from flask_restplus import abort
 @unique_constructor(db.session,
                     lambda licence_plate, *args, **kwargs: licence_plate,
                     lambda query, licence_plate, *args, **kwargs: query.filter(Vehicle.licence_plate == licence_plate))
-class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mixin):
+class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404Mixin):
     cache_label = 'taxis'
     query_class = query_callable()
     id = Column(db.Integer, primary_key=True)
@@ -75,10 +75,27 @@ class Vehicle(CacheableMixin, db.Model, AsDictMixin, MarshalMixin, FilterOr404Mi
            attrname not in self.__table__.columns:
             description = self.description
             try:
-                return getattr(description, attrname)
+                return db.Model.__getattribute__(description, attrname)
             except AttributeError as e:
                 pass
         return db.Model.__getattribute__(self, attrname)
+
+
+    def __setattr__(self, attrname, value):
+        if attrname in VehicleDescription.__table__.columns or\
+           attrname in VehicleDescription._additionnal_keys and\
+           attrname not in self.__table__.columns:
+            description = self.description
+            if not description:
+                desc = VehicleDescription(vehicle_id=self.id, status='off')
+                db.session.add(desc)
+            try:
+                r = db.Model.__setattr__(description, attrname, value)
+                db.session.add(description)
+                return r
+            except AttributeError as e:
+                pass
+        return db.Model.__setattr__(self, attrname, value)
 
 
     @classmethod
