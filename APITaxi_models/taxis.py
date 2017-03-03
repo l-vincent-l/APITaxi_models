@@ -4,7 +4,7 @@ from . import (db, Departement, ADS, Driver, Vehicle,
 from .security import User
 from APITaxi_utils import fields, get_columns_names
 from APITaxi_utils.mixins import (GetOr404Mixin, AsDictMixin, HistoryMixin,
-    FilterOr404Mixin)
+    FilterOr404Mixin, unique_constructor)
 from APITaxi_utils.caching import CacheableMixin, query_callable, cache_in
 from APITaxi_utils.get_short_uuid import get_short_uuid
 from sqlalchemy_defaults import Column
@@ -17,6 +17,7 @@ from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
 from datetime import datetime
 from itertools import groupby, izip
+from flask_login import current_user
 
 @with_pattern(r'\d+(\.\d+)?')
 def parse_number(str_):
@@ -152,7 +153,22 @@ class TaxiRedis(object):
             current_app.extensions['redis'].zadd(
                 current_app.config['REDIS_NOT_AVAILABLE'], 0., taxi_id_operator)
 
+def query_func(query, driver, vehicle, ads, **kwargs):
+    departement = Departement.filter_by_or_404(numero=str(driver['departement']))
+    driver = Driver.filter_by_or_404(
+            professional_licence=driver['professional_licence'],
+            departement_id=departement.id
+    )
+    vehicle = Vehicle.filter_by_or_404(licence_plate=vehicle['licence_plate'])
+    ads = ADS.filter_by_or_404(numero=ads['numero'], insee=ads['insee'])
+    if kwargs.get('id') and current_user.has_role('admin'):
+        return query.filter_by(id=kwargs['id'])
+    return query.filter_by(driver_id=driver.id, vehicle_id=vehicle.id, ads_id=ads.id)
 
+@unique_constructor(db.session,
+                   lambda driver, vehicle, ads, **kwargs:\
+                           "{}:{}:{}:{}".format(driver, vehicle, ads, kwargs.get(id)),
+                    query_func)
 class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
         TaxiRedis):
     @declared_attr
@@ -162,14 +178,23 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
     query_class = query_callable()
 
     def __init__(self, *args, **kwargs):
-        db.Model.__init__(self)
-        HistoryMixin.__init__(self)
-        kwargs['id'] = kwargs.get('id', None)
-        if not kwargs['id']:
+        if kwargs.get('id') is None or not current_user.has_role('admin'):
             kwargs['id'] = str(get_short_uuid())
-        super(self.__class__, self).__init__(**kwargs)
+        status = kwargs.get('status', 'off')
+        self.vehicle = Vehicle(internal_id=kwargs.get('internal_id'), **kwargs['vehicle'])
+        departement = Departement.filter_by_or_404(numero=str(kwargs['driver']['departement']))
+        self.driver = Driver.filter_by_or_404(
+            departement_id=departement.id,
+            professional_licence=kwargs['driver']['professional_licence']
+        )
+        self.ads = ADS.query.filter_by(**kwargs['ads']).first()
+        db.Model.__init__(self, vehicle_id=self.vehicle_id,
+                          driver_id=self.driver_id, ads_id=self.ads_id,
+                         id=kwargs.get('id'))
         HistoryMixin.__init__(self)
         TaxiRedis.__init__(self, self.id)
+        self.status = status
+        db.session.add(self)
 
     id = Column(db.String, primary_key=True)
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'),
@@ -188,7 +213,6 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
                                   foreign_keys=[current_hail_id])
 
     _ACTIVITY_TIMEOUT = 15*60 #Used for dash
-
 
     @property
     def status(self):
