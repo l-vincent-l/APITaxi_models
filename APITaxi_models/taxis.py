@@ -162,12 +162,17 @@ def query_func(query, driver, vehicle, ads, **kwargs):
     vehicle = Vehicle.filter_by_or_404(licence_plate=vehicle['licence_plate'])
     ads = ADS.filter_by_or_404(numero=ads['numero'], insee=ads['insee'])
     if kwargs.get('id') and current_user.has_role('admin'):
-        return query.filter_by(id=kwargs['id'])
+        t = query.filter_by(id=kwargs['id'], driver_id=driver.id,
+                            vehicle_id=vehicle.id, ads_id=ads.id)
+        if not t:
+            abort(404, message="Unable to find taxi")
+        return t
     return query.filter_by(driver_id=driver.id, vehicle_id=vehicle.id, ads_id=ads.id)
 
 @unique_constructor(db.session,
                    lambda driver, vehicle, ads, **kwargs:\
-                           "{}:{}:{}:{}".format(driver, vehicle, ads, kwargs.get(id)),
+                    "{}:{}:{}:{}:{}".format(
+                        driver, vehicle, ads, kwargs.get(id), current_user.id),
                     query_func)
 class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
         TaxiRedis):
