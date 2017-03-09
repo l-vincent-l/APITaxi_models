@@ -18,6 +18,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import json, time, math
 from sqlalchemy.sql.expression import text
+from sqlalchemy import func
 from dateutil.relativedelta import relativedelta
 from math import exp, fsum
 from itertools import izip
@@ -58,7 +59,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
     id = db.Column(db.String, primary_key=True)
     creation_datetime = db.Column(db.DateTime, nullable=False,
-                                 default=datetime.now)
+                                 default=datetime.utcnow,
+                                 server_default=func.now())
     operateur_id = db.Column(db.Integer, db.ForeignKey('user.id'),
             nullable=True)
     _operateur = db.relationship('User', 
