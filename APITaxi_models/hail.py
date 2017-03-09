@@ -58,7 +58,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
     id = db.Column(db.String, primary_key=True)
     creation_datetime = db.Column(db.DateTime, nullable=False,
-                                 default=datetime.now())
+                                 default=datetime.now)
     operateur_id = db.Column(db.Integer, db.ForeignKey('user.id'),
             nullable=True)
     _operateur = db.relationship('User', 
