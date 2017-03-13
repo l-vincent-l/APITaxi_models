@@ -51,11 +51,14 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
     @departement.setter
     def departement(self, kwargs):
         if "nom" in kwargs and kwargs['nom'] is not None:
-            self.__departement = Departement.filter_by_or_404(Departement.nom.ilike(kwargs["nom"]))
-        elif "numero" in kwargs and kwargs['numero'] is not None:
-            self.__departement = Departement.filter_by_or_404(numero=kwargs["numero"])
-        else:
-            abort(404, message="Unable to find departement: {}".format(kwargs))
+            self.__departement = Departement.query.filter(Departement.nom.ilike(kwargs["nom"])).first()
+            if self.__departement:
+                return
+        if "numero" in kwargs and kwargs['numero'] is not None:
+            self.__departement = Departement.query.filter_by(numero=kwargs["numero"]).first()
+            if self.__departement:
+                return
+        abort(404, message="Unable to find departement: {}".format(kwargs))
 
     @classmethod
     def can_be_listed_by(cls, user):
