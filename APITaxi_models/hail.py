@@ -279,31 +279,38 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             return last_change[len('change_to_'):]
         return self._status
 
-    @status.setter
-    def status(self, value):
-        old_status = self._status
-        assert value in status_enum_list, "Invalid status, {} is not in {}".format(value, status_enum_list)
-        if value == self._status:
-            return True
+    def check_role_accepted(self, value):
         roles_accepted = self.roles_accepted.get(value, None)
         if roles_accepted:
             perm = Permission(*[RoleNeed(role) for role in roles_accepted])
             if not perm.can():
                 raise RuntimeError("You're not authorized to set this status")
+
+    def check_status_required(self, value):
         status_required = self.status_required.get(value, None)
         if status_required and self._status not in status_required:
             raise ValueError("You cannot set status from {} to {}".format(
                 self._status, value))
+
+    def value_settable(self, value):
         old_status_index = status_enum_list.index(value) if value else 0
         new_status_index = status_enum_list.index(self._status) if self._status else 0
-        if not self._status or old_status_index > new_status_index \
-           or value.startswith('incident') or value.startswith('reporting'):
+        return not self._status or old_status_index > new_status_index \
+           or value.startswith('incident') or value.startswith('reporting')
+
+    @status.setter
+    def status(self, value):
+        previous_status = self._status
+        if not value in status_enum_list:
+            raise AssertionError("Invalid status, {} is not in {}".format(value, status_enum_list))
+        if value == self._status:
+            return True
+        self.check_role_accepted(value)
+        self.check_status_required(value)
+        if self.value_settable(value):
             self._status = value
-        if self._status in ('timeout_customer', 'declined_by_customer', 
-                            'incident_customer'):
-            self.manage_penalty_customer()
-        if self._status in ('timeout_taxi', 'declined_by_taxi'):
-            self.manage_penalty_taxi()
+        self.manage_penalty_customer()
+        self.manage_penalty_taxi()
 
         self.status_changed()
         taxi = TaxiM.cache.get(self.taxi_id)
@@ -314,7 +321,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                                   "added_by": User.query.get(self.added_by).email,
                                   "operator": self.operateur.email,
                                   "zupc": taxi.ads.zupc.insee,
-                                  "previous_status": old_status,
+                                  "previous_status": previous_status,
                                   "status": self._status
                                }
         )
@@ -334,12 +341,17 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         return False
 
     def manage_penalty_taxi(self):
+        if self._status not in ('timeout_taxi', 'declined_by_taxi'):
+            return
         if not current_app.config['AUTOMATIC_RATING_ACTIVATED']:
             return
         self.rating_ride_reason = 'automatic_rating'
         self.rating_ride = current_app.config['AUTOMATIC_RATING']
 
     def manage_penalty_customer(self, reporting_customer=False):
+        if self._status not in ('timeout_customer', 'declined_by_customer', 
+                            'incident_customer', 'accepted_by_customer'):
+            return
         customer = Customer.query.filter_by(id=self.customer_id,
                 moteur_id=self.added_by).first()
         if customer.reprieve_end and customer.reprieve_begin:
