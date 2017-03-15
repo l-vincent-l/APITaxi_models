@@ -198,17 +198,24 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         self.manage_penalty_customer(True)
         return value
 
-    @validates('rating_ride')
-    def validate_rating_taxi(self, key, value):
-#We need to restrict this to a subset of statuses
-        assert 1 <= value <= 5, 'Rating value has to be 1 <= value <= 5'
-        initial_rating = self.rating_ride
-        if initial_rating == value:
-            return value
-        delta = relativedelta(months=-6)
-        min_date = datetime.now() + delta
+    @classmethod
+    def compute_total_rating(cls, ratings):
+        return float(sum(
+            map(
+                lambda rs_f: sum(map(lambda r: r*rs_f[1], rs_f[0])),
+                izip(ratings.values(), decay_factor.values())
+            )
+        ))
+
+    @classmethod
+    def compute_total_factor(cls, ratings):
+        return fsum(map(lambda k_v: k_v[1]*len(ratings[k_v[0]]),
+                                decay_factor.iteritems()))
+
+    def init_rating(self, value):
+        min_date = datetime.now() + relativedelta(months=-6)
         nb_days = (datetime.now() - min_date).days
-        ratings ={i: [] for i in range(nb_days)}
+        ratings = {i: [] for i in range(nb_days)}
         ratings[0] = [value]
         HailModel = self.__class__
         for hail_ in HailModel.query.filter_by(taxi_id=self.taxi_id)\
@@ -218,12 +225,18 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             ratings[key].append(hail_.rating_ride)
         #We want to fill the ratings when there is no value
         ratings = {k: v+[4.5]*(3-len(v)) for k, v in ratings.iteritems()}
+        return ratings
+
+    @validates('rating_ride')
+    def validate_rating_taxi(self, key, value):
+#We need to restrict this to a subset of statuses
+        assert 1 <= value <= 5, 'Rating value has to be 1 <= value <= 5'
+        if self.rating_ride == value:
+            return value
+        ratings = self.init_rating(value)
         decay_factor = {nb_days-i-1:exp(-float(nb_days-i)/30.) for i in range(nb_days)}
-        total_rating = float(sum(map(lambda rs_f:
-                                     sum(map(lambda r: r*rs_f[1], rs_f[0])),
-                                     izip(ratings.values(), decay_factor.values()))))
-        total_factor = fsum(map(lambda k_v: k_v[1]*len(ratings[k_v[0]]),
-                                decay_factor.iteritems()))
+        total_rating = self.compute_total_rating(ratings)
+        total_factor = self.compute_total_factor(ratings)
         self.taxi_relation.rating = total_rating / total_factor
         return value
 
@@ -293,10 +306,13 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                 self._status, value))
 
     def value_settable(self, value):
-        old_status_index = status_enum_list.index(value) if value else 0
-        new_status_index = status_enum_list.index(self._status) if self._status else 0
-        return not self._status or old_status_index > new_status_index \
-           or value.startswith('incident') or value.startswith('reporting')
+        if self._status is None:
+            return True
+        if value.startswith('incident') or value.startswith('reporting'):
+            return True
+        old_status_index = status_enum_list.index(value)
+        new_status_index = status_enum_list.index(self._status)
+        return old_status_index > new_status_index
 
     @status.setter
     def status(self, value):
