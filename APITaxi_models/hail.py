@@ -171,18 +171,12 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         return value
 
 
-    @validates('incident_customer_reason')
-    def validate_incident_customer_reason(self, key, value):
-        if current_user.id != self.added_by:
+    @validates('incident_customer_reason', 'incident_taxi_reason')
+    def validate_incident_reason(self, key, value):
+        if current_user.id != self.added_by and key == 'incident_customer_reason'\
+                or current_user.id != self.operateur_id and key == 'incident_taxi_reason':
             raise RuntimeError()
-        self.status = 'incident_customer'
-        return value
-
-    @validates('incident_taxi_reason')
-    def validate_incident_taxi_reason(self, key, value):
-        if current_user.id != self.operateur_id:
-            raise RuntimeError()
-        self.status = 'incident_taxi'
+        self.status = key[:-7]
         return value
 
     @validates('reporting_customer_reason')
@@ -339,7 +333,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                                   "zupc": taxi.ads.zupc.insee,
                                   "previous_status": previous_status,
                                   "status": self._status
-                               }
+                              }
         )
 
     def status_changed(self):
