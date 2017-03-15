@@ -171,12 +171,18 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         return value
 
 
-    @validates('incident_customer_reason', 'incident_taxi_reason')
-    def validate_incident_reason(self, key, value):
-        if current_user.id != self.added_by and key == 'incident_customer_reason'\
-                or current_user.id != self.operateur_id and key == 'incident_taxi_reason':
+    @validates('incident_customer_reason')
+    def validate_incident_customer_reason(self, key, value):
+        if current_user.id != self.added_by:
             raise RuntimeError()
-        self.status = key[:-7]
+        self.status = 'incident_customer'
+        return value
+
+    @validates('incident_taxi_reason')
+    def validate_incident_taxi_reason(self, key, value):
+        if current_user.id != self.operateur_id:
+            raise RuntimeError()
+        self.status = 'incident_taxi'
         return value
 
     @validates('reporting_customer_reason')
@@ -193,7 +199,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         return value
 
     @classmethod
-    def compute_total_rating(cls, ratings, decay_factor):
+    def compute_total_rating(cls, decay_factor, ratings):
         return float(sum(
             map(
                 lambda rs_f: sum(map(lambda r: r*rs_f[1], rs_f[0])),
@@ -202,11 +208,11 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         ))
 
     @classmethod
-    def compute_total_factor(cls, ratings, decay_factor):
+    def compute_total_factor(cls, decay_factor, ratings):
         return fsum(map(lambda k_v: k_v[1]*len(ratings[k_v[0]]),
                                 decay_factor.iteritems()))
 
-    def init_rating(self, value, nb_days, min_date):
+    def init_rating(self, value, min_date, nb_days):
         ratings = {i: [] for i in range(nb_days)}
         ratings[0] = [value]
         HailModel = self.__class__
@@ -227,10 +233,10 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             return value
         min_date = datetime.now() + relativedelta(months=-6)
         nb_days = (datetime.now() - min_date).days
-        ratings = self.init_rating(value, nb_days, min_date)
+        ratings = self.init_rating(value, min_date, nb_days)
         decay_factor = {nb_days-i-1:exp(-float(nb_days-i)/30.) for i in range(nb_days)}
-        total_rating = self.compute_total_rating(ratings, decay_factor)
-        total_factor = self.compute_total_factor(ratings, decay_factor)
+        total_rating = self.compute_total_rating(decay_factor, ratings)
+        total_factor = self.compute_total_factor(decay_factor, ratings)
         self.taxi_relation.rating = total_rating / total_factor
         return value
 
@@ -333,7 +339,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                                   "zupc": taxi.ads.zupc.insee,
                                   "previous_status": previous_status,
                                   "status": self._status
-                              }
+                               }
         )
 
     def status_changed(self):
@@ -364,7 +370,26 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             return
         customer = Customer.query.filter_by(id=self.customer_id,
                 moteur_id=self.added_by).first()
-        customer.set_ban(reporting_customer)
+        if customer.reprieve_end and customer.reprieve_begin:
+            previous_duration = customer.reprieve_end - customer.reprieve_begin
+        else:
+            previous_duration = timedelta()
+        customer.reprieve_begin = datetime.now()
+        if not customer.reprieve_end or customer.reprieve_end < datetime.now():
+            if reporting_customer:
+                customer.reprieve_end = datetime.now() + timedelta(hours=2)
+                customer.ban_begin = datetime.now()
+                customer.ban_end = datetime.now() + timedelta(hours=1)
+            else:
+                customer.reprieve_end = datetime.now() + timedelta(hours=4)
+        else:
+            if reporting_customer:
+                customer.reprieve_end = datetime.now() + previous_duration * 8
+            else:
+                customer.reprieve_end = datetime.now() + previous_duration * 6
+            if customer.reprieve_end >= datetime.now():
+                customer.ban_begin = datetime.now()
+                customer.ban_end = datetime.now() + previous_duration / 2
 
     def to_dict(self):
         self.check_time_out()
