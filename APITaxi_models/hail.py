@@ -199,7 +199,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         return value
 
     @classmethod
-    def compute_total_rating(cls, ratings):
+    def compute_total_rating(cls, ratings, decay_factor):
         return float(sum(
             map(
                 lambda rs_f: sum(map(lambda r: r*rs_f[1], rs_f[0])),
@@ -208,13 +208,11 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         ))
 
     @classmethod
-    def compute_total_factor(cls, ratings):
+    def compute_total_factor(cls, ratings, decay_factor):
         return fsum(map(lambda k_v: k_v[1]*len(ratings[k_v[0]]),
                                 decay_factor.iteritems()))
 
-    def init_rating(self, value):
-        min_date = datetime.now() + relativedelta(months=-6)
-        nb_days = (datetime.now() - min_date).days
+    def init_rating(self, value, nb_days, min_date):
         ratings = {i: [] for i in range(nb_days)}
         ratings[0] = [value]
         HailModel = self.__class__
@@ -233,10 +231,12 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         assert 1 <= value <= 5, 'Rating value has to be 1 <= value <= 5'
         if self.rating_ride == value:
             return value
-        ratings = self.init_rating(value)
+        min_date = datetime.now() + relativedelta(months=-6)
+        nb_days = (datetime.now() - min_date).days
+        ratings = self.init_rating(value, nb_days, min_date)
         decay_factor = {nb_days-i-1:exp(-float(nb_days-i)/30.) for i in range(nb_days)}
-        total_rating = self.compute_total_rating(ratings)
-        total_factor = self.compute_total_factor(ratings)
+        total_rating = self.compute_total_rating(ratings, decay_factor)
+        total_factor = self.compute_total_factor(ratings, decay_factor)
         self.taxi_relation.rating = total_rating / total_factor
         return value
 
@@ -370,26 +370,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             return
         customer = Customer.query.filter_by(id=self.customer_id,
                 moteur_id=self.added_by).first()
-        if customer.reprieve_end and customer.reprieve_begin:
-            previous_duration = customer.reprieve_end - customer.reprieve_begin
-        else:
-            previous_duration = timedelta()
-        customer.reprieve_begin = datetime.now()
-        if not customer.reprieve_end or customer.reprieve_end < datetime.now():
-            if reporting_customer:
-                customer.reprieve_end = datetime.now() + timedelta(hours=2)
-                customer.ban_begin = datetime.now()
-                customer.ban_end = datetime.now() + timedelta(hours=1)
-            else:
-                customer.reprieve_end = datetime.now() + timedelta(hours=4)
-        else:
-            if reporting_customer:
-                customer.reprieve_end = datetime.now() + previous_duration * 8
-            else:
-                customer.reprieve_end = datetime.now() + previous_duration * 6
-            if customer.reprieve_end >= datetime.now():
-                customer.ban_begin = datetime.now()
-                customer.ban_end = datetime.now() + previous_duration / 2
+        customer.set_ban(reporting_customer)
 
     def to_dict(self):
         self.check_time_out()
