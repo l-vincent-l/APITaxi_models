@@ -34,6 +34,14 @@ class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404M
         db.session.commit()
 
     @classmethod
+    def add_description(cls, add_description, dict_description):
+        if not add_description:
+            return
+        for k, v in dict_description.items():
+            dict_description[k].attribute = 'description.{}'.format(k)
+
+
+    @classmethod
     def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None,
                     add_description=True):
         if level >=2:
@@ -44,9 +52,7 @@ class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404M
                 show_all, filter_id, level=level+1, api=api)
         dict_description.update({"model": fields.String(attribute="model"),
                         "constructor": fields.String(attribute="constructor")})
-        if add_description:
-            for k, v in dict_description.items():
-                dict_description[k].attribute = 'description.{}'.format(k)
+        cls.add_description(add_description, dict_description)
         return_.update(dict_description)
         if not filter_id:
             return_["id"] = fields.Integer()
@@ -69,10 +75,14 @@ class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404M
         return None
 
 
-    def __getattr__(self, attrname):
-        if attrname in VehicleDescription.__table__.columns or\
+    def is_vehicle_description_attribute(self, attrname):
+        return attrname in VehicleDescription.__table__.columns or\
            attrname in VehicleDescription._additionnal_keys and\
-           attrname not in self.__table__.columns:
+           attrname not in self.__table__.columns
+
+
+    def __getattr__(self, attrname):
+        if self.is_vehicle_description_attribute(attrname):
             description = self.description
             try:
                 return db.Model.__getattribute__(description, attrname)
@@ -80,21 +90,21 @@ class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404M
                 pass
         return db.Model.__getattribute__(self, attrname)
 
+    def get_or_create_desription(self):
+        description = self.description
+        if not description:
+            description = VehicleDescription(vehicle_id=self.id, status='off')
+        return description
 
     def __setattr__(self, attrname, value):
-        if attrname in VehicleDescription.__table__.columns or\
-           attrname in VehicleDescription._additionnal_keys and\
-           attrname not in self.__table__.columns:
-            description = self.description
-            if not description:
-                desc = VehicleDescription(vehicle_id=self.id, status='off')
-                db.session.add(desc)
+        if self.is_vehicle_description_attribute(attrname):
+            description = self.get_or_create_desription()
             try:
                 r = db.Model.__setattr__(description, attrname, value)
-                db.session.add(description)
-                return r
             except AttributeError as e:
                 pass
+            db.session.add(description)
+            return r
         return db.Model.__setattr__(self, attrname, value)
 
 

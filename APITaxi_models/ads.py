@@ -9,16 +9,20 @@ from APITaxi_utils import fields
 owner_type_enum = ['company', 'individual']
 class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
 
+    def get_zupc_id(self, **kwargs):
+        zupc = ZUPC.query.filter_by(insee=kwargs['insee']).first()
+        if zupc is None:
+            raise KeyError("Unable to find a ZUPC for insee: {}".format(kwargs['insee']))
+        return zupc.parent_id
+
+
     def __init__(self, *args, **kwargs):
         if "vehicle_id" not in kwargs or kwargs.get("vehicle_id") == 0:
             kwargs["vehicle_id"] = None
         if kwargs["vehicle_id"] and not Vehicle.query.get(kwargs["vehicle_id"]):
             raise KeyError("Unable to find a vehicle with the id: {}".format(
                 kwargs["vehicle_id"]))
-        zupc = ZUPC.query.filter_by(insee=kwargs['insee']).first()
-        if zupc is None:
-            raise KeyError("Unable to find a ZUPC for insee: {}".format(kwargs['insee']))
-        kwargs['zupc_id'] = zupc.parent_id
+        kwargs['zupc_id'] = self.get_zupc_id(**kwargs)
         db.Model.__init__(self, *args, **kwargs)
         HistoryMixin.__init__(self)
         db.session.add(self)
@@ -53,10 +57,6 @@ class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
     @property
     def zupc(self):
         return ZUPC.cache.get(self.zupc_id)
-
-    @classmethod
-    def can_be_listed_by(cls, user):
-        return super(ADS, cls).can_be_listed_by(user) or user.has_role('prefecture')
 
     @classmethod
     def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None):

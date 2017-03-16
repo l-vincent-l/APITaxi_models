@@ -163,26 +163,40 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def to_exclude(cls):
         return HistoryMixin.to_exclude() + ['creation_datetime']
 
+    def assert_user_is_creator(self):
+        if current_user.id != self.added_by:
+            raise RuntimeError()
+
+    def assert_user_is_operator(self):
+        if current_user.id != self.operateur_id:
+            raise RuntimeError()
+
+
     @validates('rating_ride_reason')
     def validate_rating_ride_reason(self, key, value):
 #We need to restrict this to a subset of statuses
-        if current_user.id != self.added_by and value != 'automatic_rating':
-            raise RuntimeError()
+        try:
+            self.assert_user_is_creator()
+        except RuntimeError as e:
+            if value != 'automatic_rating':
+                raise e
         return value
 
+    @validates('incident_customer_reason')
+    def validate_incident_customer_reason(self, key, value):
+        self.assert_user_is_creator()
+        self.status = 'incident_customer'
+        return value
 
-    @validates('incident_customer_reason', 'incident_taxi_reason')
-    def validate_incident_reason(self, key, value):
-        if current_user.id != self.added_by and key == 'incident_customer_reason'\
-                or current_user.id != self.operateur_id and key == 'incident_taxi_reason':
-            raise RuntimeError()
-        self.status = key[:-7]
+    @validates('incident_taxi_reason')
+    def validate_incident_taxi_reason(self, key, value):
+        self.assert_user_is_operator()
+        self.status = 'incident_taxi'
         return value
 
     @validates('reporting_customer_reason')
     def validate_reporting_customer_reason(self, key, value):
-        if current_user.id != self.operateur_id:
-            raise RuntimeError()
+        self.assert_user_is_operator()
         return value
 
     @validates('reporting_customer')
@@ -193,7 +207,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         return value
 
     @classmethod
-    def compute_total_rating(cls, ratings, decay_factor):
+    def compute_total_rating(cls, decay_factor, ratings):
         return float(sum(
             map(
                 lambda rs_f: sum(map(lambda r: r*rs_f[1], rs_f[0])),
@@ -202,11 +216,11 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         ))
 
     @classmethod
-    def compute_total_factor(cls, ratings, decay_factor):
+    def compute_total_factor(cls, decay_factor, ratings):
         return fsum(map(lambda k_v: k_v[1]*len(ratings[k_v[0]]),
                                 decay_factor.iteritems()))
 
-    def init_rating(self, value, nb_days, min_date):
+    def init_rating(self, value, min_date, nb_days):
         ratings = {i: [] for i in range(nb_days)}
         ratings[0] = [value]
         HailModel = self.__class__
@@ -227,10 +241,10 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
             return value
         min_date = datetime.now() + relativedelta(months=-6)
         nb_days = (datetime.now() - min_date).days
-        ratings = self.init_rating(value, nb_days, min_date)
+        ratings = self.init_rating(value, min_date, nb_days)
         decay_factor = {nb_days-i-1:exp(-float(nb_days-i)/30.) for i in range(nb_days)}
-        total_rating = self.compute_total_rating(ratings, decay_factor)
-        total_factor = self.compute_total_factor(ratings, decay_factor)
+        total_rating = self.compute_total_rating(decay_factor, ratings)
+        total_factor = self.compute_total_factor(decay_factor, ratings)
         self.taxi_relation.rating = total_rating / total_factor
         return value
 
@@ -333,7 +347,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                                   "zupc": taxi.ads.zupc.insee,
                                   "previous_status": previous_status,
                                   "status": self._status
-                              }
+                               }
         )
 
     def status_changed(self):
@@ -341,7 +355,6 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         field = 'change_to_{}'.format(self.status)
         if hasattr(self, field):
             setattr(self, field, self.last_status_change)
-
 
     def check_time_out(self, duration, timeout_status):
         if datetime.now() < (self.last_status_change + timedelta(seconds=duration)):

@@ -48,21 +48,22 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
     def departement(self):
         return self.__departement
 
-    @departement.setter
-    def departement(self, kwargs):
+    def set_from_nom(self, kwargs):
         if "nom" in kwargs and kwargs['nom'] is not None:
             self.__departement = Departement.query.filter(Departement.nom.ilike(kwargs["nom"])).first()
-            if self.__departement:
-                return
+        return self.__departement is not None
+
+    def set_from_departement(self, kwargs):
         if "numero" in kwargs and kwargs['numero'] is not None:
             self.__departement = Departement.query.filter_by(numero=kwargs["numero"]).first()
-            if self.__departement:
-                return
-        abort(404, message="Unable to find departement: {}".format(kwargs))
+        return self.__departement is not None
 
-    @classmethod
-    def can_be_listed_by(cls, user):
-        return super(Driver, cls).can_be_listed_by(user) or user.has_role('prefecture')
+
+    @departement.setter
+    def departement(self, kwargs):
+        if not self.set_from_nom(kwargs):
+            if not self.set_from_departement(kwargs):
+                abort(404, message="Unable to find departement: {}".format(kwargs))
 
     @classmethod
     def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None):

@@ -105,29 +105,25 @@ class TaxiRedis(object):
             return []
         return cls.transform_caracs(scan)
 
+    def set_min_time(self, min_time):
+        return min_time or int(time.time() - self._DISPONIBILITY_DURATION)
+
 
     def get_operator(self, min_time=None, favorite_operator=None):
-        if not min_time:
-            min_time = int(time.time() - self._DISPONIBILITY_DURATION)
-        min_return = (None, min_time)
-        for operator, timestamp in self.get_fresh_operateurs_timestamps():
-            if operator == favorite_operator:
-                min_return = (operator, timestamp)
-                break
-            if int(timestamp) > min_return[1]:
-                min_return = (operator, timestamp)
-        if min_return[0] is None:
-            return (None, None)
-        return min_return
+        min_time = self.set_min_time(min_time)
+        possibilities = self.get_fresh_operateurs_timestamps(min_time)
+        fav = filter(lambda v: v[0] == favorite_operator, possibilities)
+        if fav:
+            return fav[0]
+        return max(possibilities, lambda v: v[1]) if possibilities else (None, None)
 
 
     def get_fresh_operateurs_timestamps(self, min_time=None):
-        if not min_time:
-            min_time = int(time.time() - self._DISPONIBILITY_DURATION)
+        min_time = self.set_min_time(min_time)
         caracs = self.caracs(min_time)
         if not self._fresh_operateurs_timestamps:
             self._fresh_operateurs_timestamps = list(map(
-                lambda (email, c): (email, c['timestamp']),
+                lambda email, c: (email, c['timestamp']),
                 caracs
             ))
         return self._fresh_operateurs_timestamps
@@ -421,9 +417,15 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
         }
 
     @staticmethod
+    def filter_operateur_id(l, operateur_id):
+        return [v for v in l
+                if not operateur_id or v['vehicle_description_added_by'] == operateur_id
+        ]
+
+
+    @staticmethod
     def get(ids=None, operateur_id=None,id_=None):
-        return [[v for v in l
-                if not operateur_id or v['vehicle_description_added_by'] == operateur_id]
+        return [RawTaxi.filter_operateur_id(l, operateur_id)
                 for l in cache_in(RawTaxi.request_in, ids,
                             RawTaxi.region, get_id=lambda v: v[0]['taxi_id'],
                             transform_result=lambda r: map(lambda v: list(v[1]),
@@ -434,23 +436,3 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
     def flush(id_):
         region = current_app.extensions['dogpile_cache'].get_region(RawTaxi.region)
         region.delete((RawTaxi.region, id_))
-
-def refresh_taxi(**kwargs):
-    id_ = kwargs.get('id_', None)
-    if id_:
-        Taxi.getter_db.refresh(id_)
-        return
-    filters = []
-    for k in ('ads', 'vehicle', 'driver'):
-        param = kwargs.get(k, None)
-        if not param:
-            continue
-        filter_k = '{}_id'.format(k)
-        if isinstance(param, list):
-            filters.extend([{filter_k: i} for i in param])
-        elif param:
-            filters.extend([{filter_k: param}])
-    for filter_ in filters:
-        for taxi in Taxi.query.filter_by(**filter_):
-            Taxi.getter_db.refresh(Taxi, taxi.id)
-
