@@ -417,9 +417,15 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
         }
 
     @staticmethod
+    def filter_operateur_id(l, operateur_id):
+        return [v for v in l
+                if not operateur_id or v['vehicle_description_added_by'] == operateur_id
+        ]
+
+
+    @staticmethod
     def get(ids=None, operateur_id=None,id_=None):
-        return [[v for v in l
-                if not operateur_id or v['vehicle_description_added_by'] == operateur_id]
+        return [RawTaxi.filter_operateur_id(l, operateur_id)
                 for l in cache_in(RawTaxi.request_in, ids,
                             RawTaxi.region, get_id=lambda v: v[0]['taxi_id'],
                             transform_result=lambda r: map(lambda v: list(v[1]),
@@ -430,7 +436,6 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
     def flush(id_):
         region = current_app.extensions['dogpile_cache'].get_region(RawTaxi.region)
         region.delete((RawTaxi.region, id_))
-
 def refresh_taxi(**kwargs):
     id_ = kwargs.get('id_', None)
     if id_:
@@ -449,4 +454,3 @@ def refresh_taxi(**kwargs):
     for filter_ in filters:
         for taxi in Taxi.query.filter_by(**filter_):
             Taxi.getter_db.refresh(Taxi, taxi.id)
-
