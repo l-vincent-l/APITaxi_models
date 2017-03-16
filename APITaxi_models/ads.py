@@ -9,16 +9,20 @@ from APITaxi_utils import fields
 owner_type_enum = ['company', 'individual']
 class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
 
+    def get_zupc_id(self, **kwargs):
+        zupc = ZUPC.query.filter_by(insee=kwargs['insee']).first()
+        if zupc is None:
+            raise KeyError("Unable to find a ZUPC for insee: {}".format(kwargs['insee']))
+        return zupc.parent_id
+
+
     def __init__(self, *args, **kwargs):
         if "vehicle_id" not in kwargs or kwargs.get("vehicle_id") == 0:
             kwargs["vehicle_id"] = None
         if kwargs["vehicle_id"] and not Vehicle.query.get(kwargs["vehicle_id"]):
             raise KeyError("Unable to find a vehicle with the id: {}".format(
                 kwargs["vehicle_id"]))
-        zupc = ZUPC.query.filter_by(insee=kwargs['insee']).first()
-        if zupc is None:
-            raise KeyError("Unable to find a ZUPC for insee: {}".format(kwargs['insee']))
-        kwargs['zupc_id'] = zupc.parent_id
+        kwargs['zupc_id'] = self.get_zupc_id(**kwargs)
         db.Model.__init__(self, *args, **kwargs)
         HistoryMixin.__init__(self)
         db.session.add(self)
