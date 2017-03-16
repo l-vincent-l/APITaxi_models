@@ -34,6 +34,14 @@ class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404M
         db.session.commit()
 
     @classmethod
+    def add_description(cls, add_description, dict_description):
+        if not add_description:
+            return
+        for k, v in dict_description.items():
+            dict_description[k].attribute = 'description.{}'.format(k)
+
+
+    @classmethod
     def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None,
                     add_description=True):
         if level >=2:
@@ -44,9 +52,7 @@ class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404M
                 show_all, filter_id, level=level+1, api=api)
         dict_description.update({"model": fields.String(attribute="model"),
                         "constructor": fields.String(attribute="constructor")})
-        if add_description:
-            for k, v in dict_description.items():
-                dict_description[k].attribute = 'description.{}'.format(k)
+        cls.add_description(add_description, dict_description)
         return_.update(dict_description)
         if not filter_id:
             return_["id"] = fields.Integer()
