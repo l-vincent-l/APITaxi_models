@@ -59,10 +59,6 @@ class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
         return ZUPC.cache.get(self.zupc_id)
 
     @classmethod
-    def can_be_listed_by(cls, user):
-        return super(ADS, cls).can_be_listed_by(user) or user.has_role('prefecture')
-
-    @classmethod
     def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None):
         if level >=2:
             return {}
