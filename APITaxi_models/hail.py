@@ -163,32 +163,40 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
     def to_exclude(cls):
         return HistoryMixin.to_exclude() + ['creation_datetime']
 
+    def assert_user_is_creator(self):
+        if current_user.id != self.added_by:
+            raise RuntimeError()
+
+    def assert_user_is_operator(self):
+        if current_user.id != self.operateur_id:
+            raise RuntimeError()
+
+
     @validates('rating_ride_reason')
     def validate_rating_ride_reason(self, key, value):
 #We need to restrict this to a subset of statuses
-        if current_user.id != self.added_by and value != 'automatic_rating':
-            raise RuntimeError()
+        try:
+            self.assert_user_is_creator()
+        except RuntimeError as e:
+            if value != 'automatic_rating':
+                raise e
         return value
-
 
     @validates('incident_customer_reason')
     def validate_incident_customer_reason(self, key, value):
-        if current_user.id != self.added_by:
-            raise RuntimeError()
+        self.assert_user_is_creator()
         self.status = 'incident_customer'
         return value
 
     @validates('incident_taxi_reason')
     def validate_incident_taxi_reason(self, key, value):
-        if current_user.id != self.operateur_id:
-            raise RuntimeError()
+        self.assert_user_is_operator()
         self.status = 'incident_taxi'
         return value
 
     @validates('reporting_customer_reason')
     def validate_reporting_customer_reason(self, key, value):
-        if current_user.id != self.operateur_id:
-            raise RuntimeError()
+        self.assert_user_is_operator()
         return value
 
     @validates('reporting_customer')
@@ -347,7 +355,6 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         field = 'change_to_{}'.format(self.status)
         if hasattr(self, field):
             setattr(self, field, self.last_status_change)
-
 
     def check_time_out(self, duration, timeout_status):
         if datetime.now() < (self.last_status_change + timedelta(seconds=duration)):
