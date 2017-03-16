@@ -127,7 +127,7 @@ class TaxiRedis(object):
         caracs = self.caracs(min_time)
         if not self._fresh_operateurs_timestamps:
             self._fresh_operateurs_timestamps = list(map(
-                lambda (email, c): (email, c['timestamp']),
+                lambda email, c: (email, c['timestamp']),
                 caracs
             ))
         return self._fresh_operateurs_timestamps
