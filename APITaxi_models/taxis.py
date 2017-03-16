@@ -105,25 +105,21 @@ class TaxiRedis(object):
             return []
         return cls.transform_caracs(scan)
 
+    def set_min_time(self, min_time):
+        return min_time or int(time.time() - self._DISPONIBILITY_DURATION)
+
 
     def get_operator(self, min_time=None, favorite_operator=None):
-        if not min_time:
-            min_time = int(time.time() - self._DISPONIBILITY_DURATION)
-        min_return = (None, min_time)
-        for operator, timestamp in self.get_fresh_operateurs_timestamps():
-            if operator == favorite_operator:
-                min_return = (operator, timestamp)
-                break
-            if int(timestamp) > min_return[1]:
-                min_return = (operator, timestamp)
-        if min_return[0] is None:
-            return (None, None)
-        return min_return
+        min_time = self.set_min_time(min_time)
+        possibilities = self.get_fresh_operateurs_timestamps(min_time)
+        fav = filter(lambda v: v[0] == favorite_operator, possibilities)
+        if fav:
+            return fav[0]
+        return max(possibilities, lambda v: v[1]) if possibilities else (None, None)
 
 
     def get_fresh_operateurs_timestamps(self, min_time=None):
-        if not min_time:
-            min_time = int(time.time() - self._DISPONIBILITY_DURATION)
+        min_time = self.set_min_time(min_time)
         caracs = self.caracs(min_time)
         if not self._fresh_operateurs_timestamps:
             self._fresh_operateurs_timestamps = list(map(
