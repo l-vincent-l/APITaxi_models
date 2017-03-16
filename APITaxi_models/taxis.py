@@ -436,21 +436,3 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
     def flush(id_):
         region = current_app.extensions['dogpile_cache'].get_region(RawTaxi.region)
         region.delete((RawTaxi.region, id_))
-def refresh_taxi(**kwargs):
-    id_ = kwargs.get('id_', None)
-    if id_:
-        Taxi.getter_db.refresh(id_)
-        return
-    filters = []
-    for k in ('ads', 'vehicle', 'driver'):
-        param = kwargs.get(k, None)
-        if not param:
-            continue
-        filter_k = '{}_id'.format(k)
-        if isinstance(param, list):
-            filters.extend([{filter_k: i} for i in param])
-        elif param:
-            filters.extend([{filter_k: param}])
-    for filter_ in filters:
-        for taxi in Taxi.query.filter_by(**filter_):
-            Taxi.getter_db.refresh(Taxi, taxi.id)
