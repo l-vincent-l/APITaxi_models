@@ -75,10 +75,14 @@ class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404M
         return None
 
 
-    def __getattr__(self, attrname):
-        if attrname in VehicleDescription.__table__.columns or\
+    def is_vehicle_description_attribute(self, attrname):
+        return attrname in VehicleDescription.__table__.columns or\
            attrname in VehicleDescription._additionnal_keys and\
-           attrname not in self.__table__.columns:
+           attrname not in self.__table__.columns
+
+
+    def __getattr__(self, attrname):
+        if self.is_vehicle_description_attribute(attrname):
             description = self.description
             try:
                 return db.Model.__getattribute__(description, attrname)
@@ -86,21 +90,21 @@ class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404M
                 pass
         return db.Model.__getattribute__(self, attrname)
 
+    def get_or_create_desription(self):
+        description = self.description
+        if not description:
+            description = VehicleDescription(vehicle_id=self.id, status='off')
+        return description
 
     def __setattr__(self, attrname, value):
-        if attrname in VehicleDescription.__table__.columns or\
-           attrname in VehicleDescription._additionnal_keys and\
-           attrname not in self.__table__.columns:
-            description = self.description
-            if not description:
-                desc = VehicleDescription(vehicle_id=self.id, status='off')
-                db.session.add(desc)
+        if self.is_vehicle_description_attribute(attrname):
+            description = self.get_or_create_desription()
             try:
                 r = db.Model.__setattr__(description, attrname, value)
-                db.session.add(description)
-                return r
             except AttributeError as e:
                 pass
+            db.session.add(description)
+            return r
         return db.Model.__setattr__(self, attrname, value)
 
 
