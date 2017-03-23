@@ -134,6 +134,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         if customer.ban_end and datetime.now() < customer.ban_end:
             self.status = 'customer_banned'
             db.session.add(self)
+            g.hail_log = HailLog('POST', None, request.data)
             abort(403, message='Customer is banned')
 
         descriptions = RawTaxi.get((kwargs['taxi_id'],), self.operateur_id)
