@@ -347,7 +347,8 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
                                   "operator": self.operateur.email,
                                   "zupc": taxi.ads.zupc.insee,
                                   "previous_status": previous_status,
-                                  "status": self._status
+                                  "status": self._status,
+                                  "hail_id": self.id
                                }
         )
 
@@ -356,6 +357,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         field = 'change_to_{}'.format(self.status)
         if hasattr(self, field):
             setattr(self, field, self.last_status_change)
+
 
     def check_time_out(self, duration, timeout_status):
         if datetime.now() < (self.last_status_change + timedelta(seconds=duration)):
