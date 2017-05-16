@@ -341,7 +341,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
         taxi = TaxiM.cache.get(self.taxi_id)
         taxi.synchronize_status_with_hail(self)
         influx_db.write_point(current_app.config['INFLUXDB_TAXIS_DB'],
-                              "hails_status_changed",
+                              "hails_status_changed_with_id",
                               {
                                   "added_by": User.query.get(self.added_by).email,
                                   "operator": self.operateur.email,
