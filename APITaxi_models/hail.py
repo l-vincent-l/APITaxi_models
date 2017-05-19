@@ -354,7 +354,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
     def status_changed(self):
         self.last_status_change = datetime.now()
-        field = 'change_to_{}'.format(self.status)
+        field = 'change_to_{}'.format(self._status)
         if hasattr(self, field):
             setattr(self, field, self.last_status_change)
 
