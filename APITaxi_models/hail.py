@@ -376,7 +376,7 @@ class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
 
     def manage_penalty_customer(self, reporting_customer=False):
         if self._status not in ('timeout_customer', 'declined_by_customer', 
-                            'incident_customer', 'accepted_by_customer'):
+                            'incident_customer') and not reporting_customer:
             return
         customer = Customer.query.filter_by(id=self.customer_id,
                 moteur_id=self.added_by).first()
