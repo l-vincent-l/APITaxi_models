@@ -232,10 +232,9 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
 
     @status.setter
     def status(self, status):
-        current_app.logger.debug("taxi status setter")
-        self.vehicle.description.status = status
         if not self.current_hail_id:
             return
+        self.vehicle.description.status = status
         new_status, new_hail_id = self.get_new_hail_status(
             self.current_hail_id, status, self.current_hail.status)
         if new_status is not None:
@@ -247,10 +246,12 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
         if status in ('free', 'off'):
             if hail_status in ('accepted_by_customer', 'customer_on_board'):
                 return ('finished', None)
-        if status == 'occupied':
+            return hail_status, None
+        elif status == 'occupied':
             if hail_status == 'accepted_by_customer':
                 return ('customer_on_board', current_hail_id)
-        return (hail_status, current_hail_id)
+        else:
+            return (hail_status, current_hail_id)
 
 
     def is_free(self, min_time=None):
