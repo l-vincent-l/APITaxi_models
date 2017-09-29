@@ -23,7 +23,7 @@ from dateutil.relativedelta import relativedelta
 from math import exp, fsum
 from itertools import izip
 
-new_version_statuses = ['finished', 'customer_on_board',
+new_version_statuses = ['customer_on_board', 'finished',
                         'timeout_accepted_by_customer']
 status_enum_list = [ 'emitted', 'received', 'sent_to_operator',
  'received_by_operator', 'received_by_taxi', 'timeout_taxi', 'accepted_by_taxi',
