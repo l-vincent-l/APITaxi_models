@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-VERSION = (0, 1, 0)
+VERSION = (0, 1, 1)
 __author__ = 'Vincent Lara'
 __contact__ = "vincent.lara@data.gouv.fr"
 __homepage__ = "https://github.com/"

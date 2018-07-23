@@ -6,7 +6,7 @@ from flask_restplus import abort
 from datetime import datetime, timedelta
 from APITaxi_utils import fields, influx_db
 from APITaxi_utils.mixins import GetOr404Mixin, HistoryMixin, AsDictMixin
-from APITaxi_utils.caching import CacheableMixin, query_callable
+from APITaxi_utils.caching import query_callable
 from APITaxi_utils.get_short_uuid import get_short_uuid
 from . import db, Customer, security
 from .security import User
@@ -43,14 +43,12 @@ incident_customer_reason_enum = ['',
 incident_taxi_reason_enum = ['no_show', 'address', 'traffic', 'breakdown',
                              'traffic_jam', 'garbage_truck']
 
-class Hail(HistoryMixin, CacheableMixin, db.Model, AsDictMixin, GetOr404Mixin):
+class Hail(HistoryMixin, db.Model, AsDictMixin, GetOr404Mixin):
     @declared_attr
     def added_by(cls):
         return db.Column(db.Integer,db.ForeignKey('user.id'))
 
 
-    cache_label = 'hails'
-    query_class = query_callable()
     public_fields = ['creation_datetime', 'customer_address', 'customer_id',
         'customer_lat', 'customer_lon', 'customer_phone_number', 'id',
         'incident_customer_reason', 'incident_taxi_reason', 'last_status_change',
