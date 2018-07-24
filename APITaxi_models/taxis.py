@@ -5,7 +5,6 @@ from .security import User
 from APITaxi_utils import fields, get_columns_names
 from APITaxi_utils.mixins import (GetOr404Mixin, AsDictMixin, HistoryMixin,
     FilterOr404Mixin, unique_constructor)
-from APITaxi_utils.caching import CacheableMixin, query_callable, cache_in
 from APITaxi_utils.get_short_uuid import get_short_uuid
 from sqlalchemy_defaults import Column
 from sqlalchemy.types import Enum
@@ -170,13 +169,11 @@ def query_func(query, driver, vehicle, ads, **kwargs):
                     "{}:{}:{}:{}:{}".format(
                         driver, vehicle, ads, kwargs.get(id), current_user.id),
                     query_func)
-class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
+class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
         TaxiRedis):
     @declared_attr
     def added_by(cls):
         return Column(db.Integer,db.ForeignKey('user.id'))
-    cache_label = 'taxis'
-    query_class = query_callable()
 
     def __init__(self, *args, **kwargs):
         if kwargs.get('id') is None or not current_user.has_role('admin'):
@@ -322,7 +319,6 @@ class Taxi(CacheableMixin, db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
 
 
 class RawTaxi(object):
-    region = 'taxis_cache_sql'
     fields_get = {
         "taxi": get_columns_names(Taxi),
         "model": get_columns_names(Model),
@@ -424,12 +420,16 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
 
     @staticmethod
     def get(ids=None, operateur_id=None,id_=None):
-        return [RawTaxi.filter_operateur_id(l, operateur_id)
-                for l in cache_in(RawTaxi.request_in, ids,
-                            RawTaxi.region, get_id=lambda v: v[0]['taxi_id'],
-                            transform_result=lambda r: map(lambda v: list(v[1]),
-                            groupby(r, lambda t: t['taxi_id']),))
-               if l]
+       ids_c = [i[1] for i in ids_c]
+       r = db.engine.execute(RawTaxi.request_in,  [(tuple(ids_c),)]).fetchall()
+       res = map(dict, r)
+       transform_result=lambda r: map(lambda v: list(v[1], groupby(r, lambda t: t['taxi_id']),))
+       res = transform_result(res)
+       orders_res = {v['id']:i for i, v in enumerate(res)}
+       l_r = [res[orders_res[id_]] if id_ in orders_res else None for id_ in ids_c]
+
+       return [RawTaxi.filter_operateur_id(l, operateur_id)
+              for l in [res[orders_res[id_]] if id_ in orders_res else None for id_ in ids_c]]
 
     @staticmethod
     def flush(id_):
