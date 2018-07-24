@@ -336,7 +336,7 @@ class Hail(HistoryMixin, db.Model, AsDictMixin, GetOr404Mixin):
         self.manage_penalty_taxi()
 
         self.status_changed()
-        taxi = TaxiM.cache.get(self.taxi_id)
+        taxi = TaxiM.query.get(self.taxi_id)
         taxi.synchronize_status_with_hail(self)
         influx_db.write_point(current_app.config['INFLUXDB_TAXIS_DB'],
                               "hails_status_changed_with_id",
