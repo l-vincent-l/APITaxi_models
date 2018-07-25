@@ -6,7 +6,6 @@ from flask_restplus import abort
 from datetime import datetime, timedelta
 from APITaxi_utils import fields, influx_db
 from APITaxi_utils.mixins import GetOr404Mixin, HistoryMixin, AsDictMixin
-from APITaxi_utils.caching import query_callable
 from APITaxi_utils.get_short_uuid import get_short_uuid
 from . import db, Customer, security
 from .security import User

@@ -2,7 +2,6 @@
 from . import db, Constructor, Model
 from .security import User
 from sqlalchemy_defaults import Column
-from APITaxi_utils.caching import CacheableMixin, query_callable
 from APITaxi_utils.mixins import unique_constructor, HistoryMixin, AsDictMixin
 from sqlalchemy.types import Enum
 from sqlalchemy.ext.declarative import declared_attr
@@ -19,12 +18,10 @@ status_vehicle_description_enum = ['free', 'answering', 'occupied', 'oncoming', 
                    query.filter(and_(\
                        VehicleDescription.vehicle_id == vehicle_id,
                        VehicleDescription.added_by == current_user.id)))
-class VehicleDescription(HistoryMixin, CacheableMixin, db.Model, AsDictMixin):
+class VehicleDescription(HistoryMixin, db.Model, AsDictMixin):
     @declared_attr
     def added_by(cls):
         return Column(db.Integer,db.ForeignKey('user.id'))
-    cache_label = 'taxis'
-    query_class = query_callable()
     _additionnal_keys = ['constructor', 'model']
 
     def __init__(self, *args, **kwargs):
