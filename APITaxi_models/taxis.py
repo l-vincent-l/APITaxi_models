@@ -314,7 +314,6 @@ class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
             return
         description = self.vehicle.get_description(hail.operateur)
         description.status = next_status
-        RawTaxi.flush(self.id)
 
 
 
@@ -420,18 +419,8 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
 
     @staticmethod
     def get(ids=None, operateur_id=None,id_=None):
-       ids_c = [i[1] for i in ids_c]
-       r = db.engine.execute(RawTaxi.request_in,  [(tuple(ids_c),)]).fetchall()
-       res = map(dict, r)
-       transform_result=lambda r: map(lambda v: list(v[1], groupby(r, lambda t: t['taxi_id']),))
-       res = transform_result(res)
-       orders_res = {v['id']:i for i, v in enumerate(res)}
-       l_r = [res[orders_res[id_]] if id_ in orders_res else None for id_ in ids_c]
-
-       return [RawTaxi.filter_operateur_id(l, operateur_id)
-              for l in [res[orders_res[id_]] if id_ in orders_res else None for id_ in ids_c]]
-
-    @staticmethod
-    def flush(id_):
-        region = current_app.extensions['dogpile_cache'].get_region(RawTaxi.region)
-        region.delete((RawTaxi.region, id_))
+       res = [dict(v) for v in db.engine.execute(RawTaxi.request_in,  [(tuple(ids),)]).fetchall()]
+       res = map(lambda v: list(v[1]), groupby(res, lambda t: t['taxi_id']),)
+       orders_res = {v[0]['taxi_id']:i for i, v in enumerate(res)}
+       l_r = [res[orders_res[id_]] if id_ in orders_res else None for id_ in ids]
+       return [RawTaxi.filter_operateur_id(l, operateur_id) for l in l_r if l]
