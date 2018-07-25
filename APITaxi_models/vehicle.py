@@ -3,7 +3,6 @@ from . import db, VehicleDescription
 from APITaxi_utils.mixins import (AsDictMixin, HistoryMixin, unique_constructor,
         MarshalMixin, FilterOr404Mixin)
 from APITaxi_utils import fields
-from APITaxi_utils.caching import CacheableMixin, query_callable
 from sqlalchemy_defaults import Column
 from flask_login import current_user
 from flask_restplus import abort
@@ -11,9 +10,7 @@ from flask_restplus import abort
 @unique_constructor(db.session,
                     lambda licence_plate, *args, **kwargs: licence_plate,
                     lambda query, licence_plate, *args, **kwargs: query.filter(Vehicle.licence_plate == licence_plate))
-class Vehicle(db.Model, CacheableMixin , AsDictMixin, MarshalMixin, FilterOr404Mixin):
-    cache_label = 'taxis'
-    query_class = query_callable()
+class Vehicle(db.Model, AsDictMixin, MarshalMixin, FilterOr404Mixin):
     id = Column(db.Integer, primary_key=True)
     licence_plate = Column(db.String(80), label=u'Immatriculation',
             description=u'Immatriculation du véhicule',
