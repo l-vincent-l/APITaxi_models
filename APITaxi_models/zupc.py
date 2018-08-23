@@ -2,16 +2,12 @@
 from . import db
 from sqlalchemy_defaults import Column
 from APITaxi_utils.mixins import MarshalMixin, FilterOr404Mixin
-from APITaxi_utils.caching import CacheableMixin, query_callable
 from geoalchemy2 import Geography
 from geoalchemy2.shape import to_shape
 from shapely.prepared import prep
 
 
-class ZUPC(db.Model, MarshalMixin, CacheableMixin):
-    cache_label = 'zupc'
-    query_class = query_callable()
-
+class ZUPC(db.Model, MarshalMixin):
     id = Column(db.Integer, primary_key=True)
     departement_id = Column(db.Integer, db.ForeignKey('departement.id'))
     nom = Column(db.String(255), label='Nom')
