@@ -56,7 +56,7 @@ class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
 
     @property
     def zupc(self):
-        return ZUPC.cache.get(self.zupc_id)
+        return ZUPC.query.get(self.zupc_id)
 
     @classmethod
     def marshall_obj(cls, show_all=False, filter_id=False, level=0, api=None):
