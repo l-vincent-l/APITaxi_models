@@ -70,19 +70,24 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
         if level == 2:
             return {}
         r = super(Driver, cls).marshall_obj(show_all, filter_id, level+1, api)
-        departement_model = api.model("departement",
+        from flask_restplus.model import Model
+        class NoSchemaModel(Model):
+            _schema = None
+            is_no_schema = True
+        departement_model = NoSchemaModel("departement",
                                       Departement.marshall_obj(show_all,
                                                                filter_id,
                                                                level=level+1,
                                                                api=api)
         )
-        departement_model.__schema__ = {
+        departement_model._schema = {
             u'type': 'object',
             u'anyOf': [
                 {'nom': {u'description': '', u'type': u'string'}},
                 {'numero': {u'description': '', u'type': u'string'}}
             ]
         }
+        api.add_model("departement", departement_model)
         r['departement'] = fields.Nested(departement_model)
         return r
 
