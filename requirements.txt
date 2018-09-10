@@ -6,6 +6,6 @@ Flask-SQLAlchemy==2.1
 parse==1.8.4
 GeoAlchemy2==0.5.0
 Shapely==1.6.4.post2
-SQLAlchemy=1.2.11
+SQLAlchemy==1.2.11
 SQLAlchemy-Defaults==0.4.4
 SQLAlchemy-Utils==0.33.3
