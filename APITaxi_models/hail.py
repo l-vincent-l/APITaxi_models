@@ -78,9 +78,6 @@ class Hail(HistoryMixin, db.Model, AsDictMixin, GetOr404Mixin):
                         name='hail_status'),
                         default='emitted', nullable=False, name='status')
     last_status_change = db.Column(db.DateTime, default=datetime.now())
-    db.ForeignKeyConstraint(['operateur_id', 'customer_id'],
-        ['customer.operateur_id', 'customer.id'],
-        )
     taxi_phone_number = db.Column(db.String, nullable=True)
     rating_ride = db.Column(db.Integer)
     rating_ride_reason = db.Column(db.Enum(*rating_ride_reason_enum,
@@ -110,6 +107,12 @@ class Hail(HistoryMixin, db.Model, AsDictMixin, GetOr404Mixin):
     change_to_finished = db.Column(db.DateTime, nullable=True)
     change_to_customer_on_board = db.Column(db.DateTime, nullable=True)
     change_to_timeout_accepted_by_customer = db.Column(db.DateTime, nullable=True)
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['customer_id', 'added_by'],
+            ['customer.id', 'customer.moteur_id'],
+        ),
+    )
 
 
     def __init__(self, *args, **kwargs):
