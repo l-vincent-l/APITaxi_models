@@ -19,7 +19,7 @@ else:
         return None if value is None else int(value)
 
     def validate_string(value):
-        assert value is None or isinstance(value, basestring)
+        assert value is None or isinstance(value, str)
         return value
 
     def validate_datetime(value):
@@ -70,7 +70,7 @@ else:
                     "Error with field {}: {} is not in {}".format(
                         inst.property.columns[0].name,
                         value,
-                        inst.property.columns[0].type._valid_lookup.keys()
+                        list(inst.property.columns[0].type._valid_lookup.keys())
                     )
                 return value
             else:

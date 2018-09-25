@@ -12,8 +12,8 @@ from flask_restplus import abort
                     lambda query, licence_plate, *args, **kwargs: query.filter(Vehicle.licence_plate == licence_plate))
 class Vehicle(db.Model, AsDictMixin, MarshalMixin, FilterOr404Mixin):
     id = Column(db.Integer, primary_key=True)
-    licence_plate = Column(db.String(80), label=u'Immatriculation',
-            description=u'Immatriculation du véhicule',
+    licence_plate = Column(db.String(80), label='Immatriculation',
+            description='Immatriculation du véhicule',
             unique=True)
     descriptions = db.relationship("VehicleDescription",
             lazy='joined')
@@ -34,7 +34,7 @@ class Vehicle(db.Model, AsDictMixin, MarshalMixin, FilterOr404Mixin):
     def add_description(cls, add_description, dict_description):
         if not add_description:
             return
-        for k, v in dict_description.items():
+        for k, v in list(dict_description.items()):
             dict_description[k].attribute = 'description.{}'.format(k)
 
 
@@ -53,7 +53,7 @@ class Vehicle(db.Model, AsDictMixin, MarshalMixin, FilterOr404Mixin):
         return_.update(dict_description)
         if not filter_id:
             return_["id"] = fields.Integer()
-        if "internal_id" in return_.keys():
+        if "internal_id" in list(return_.keys()):
             del return_["internal_id"]
         return return_
 
@@ -113,7 +113,7 @@ class Vehicle(db.Model, AsDictMixin, MarshalMixin, FilterOr404Mixin):
         return r
 
     def __repr__(self):
-        return '<Vehicle %r>' % unicode(self.id)
+        return '<Vehicle %r>' % str(self.id)
 
     def __eq__(self, other):
         return self.__repr__() == other.__repr__()
@@ -123,6 +123,6 @@ class Vehicle(db.Model, AsDictMixin, MarshalMixin, FilterOr404Mixin):
 
     @classmethod
     def to_exclude(cls):
-        columns = list(filter(lambda f: isinstance(getattr(HistoryMixin, f), Column), HistoryMixin.__dict__.keys()))
+        columns = list([f for f in list(HistoryMixin.__dict__.keys()) if isinstance(getattr(HistoryMixin, f), Column)])
         columns += ["Vehicle", "vehicle_taxi", "descriptions"]
         return columns

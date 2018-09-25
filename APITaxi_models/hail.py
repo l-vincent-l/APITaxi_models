@@ -20,7 +20,6 @@ from sqlalchemy.sql.expression import text
 from sqlalchemy import func
 from dateutil.relativedelta import relativedelta
 from math import exp, fsum
-from itertools import izip
 
 new_version_statuses = ['customer_on_board', 'finished',
                         'timeout_accepted_by_customer']
@@ -210,16 +209,12 @@ class Hail(HistoryMixin, db.Model, AsDictMixin, GetOr404Mixin):
     @classmethod
     def compute_total_rating(cls, decay_factor, ratings):
         return float(sum(
-            map(
-                lambda rs_f: sum(map(lambda r: r*rs_f[1], rs_f[0])),
-                izip(ratings.values(), decay_factor.values())
-            )
+            [sum([r*rs_f[1] for r in rs_f[0]]) for rs_f in zip(list(ratings.values()), list(decay_factor.values()))]
         ))
 
     @classmethod
     def compute_total_factor(cls, decay_factor, ratings):
-        return fsum(map(lambda k_v: k_v[1]*len(ratings[k_v[0]]),
-                                decay_factor.iteritems()))
+        return fsum([k_v[1]*len(ratings[k_v[0]]) for k_v in list(decay_factor.items())])
 
     def init_rating(self, value, min_date, nb_days):
         ratings = {i: [] for i in range(nb_days)}
@@ -231,7 +226,7 @@ class Hail(HistoryMixin, db.Model, AsDictMixin, GetOr404Mixin):
             key = nb_days - (hail_.creation_datetime - min_date).days - 1
             ratings[key].append(hail_.rating_ride)
         #We want to fill the ratings when there is no value
-        ratings = {k: v+[4.5]*(3-len(v)) for k, v in ratings.iteritems()}
+        ratings = {k: v+[4.5]*(3-len(v)) for k, v in list(ratings.items())}
         return ratings
 
     @validates('rating_ride')
@@ -431,16 +426,18 @@ class HailLog(object):
         name = 'hail:{}'.format(self.id)
         to_store = {
                     "method": self.method,
-                    "payload": self.payload,
+                    "payload": self.payload.decode() if hasattr(self.payload, "decode") else self.payload,
                     "initial_status": self.initial_status,
                     "user": current_user.email if current_user else ""
         }
         if error:
-            to_store['error'] = error
+            to_store['error'] = error.decode() if hasattr(error, "decode") else error
         else:
             to_store['return'] = response.data if hasattr(response, 'data') else response.content
+            to_store['return'] = to_store['return'].decode() if hasattr(to_store['return'], "decode") else to_store['return']
             to_store['code'] = response.status_code
-        redis_store.zadd(name, self.datetime, json.dumps(to_store))
+        to_store_json = json.dumps(to_store)
+        redis_store.zadd(name, self.datetime, to_store_json)
         redis_store.expire(name, timedelta(weeks=6))
 
     @classmethod

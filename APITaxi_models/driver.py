@@ -10,15 +10,15 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
     _additionnal_keys = ['departement']
 
     id = Column(db.Integer, primary_key=True)
-    last_name = Column(db.String(255), label='Nom', description=u'Nom du conducteur')
-    first_name = Column(db.String(255), label=u'Prénom',
-            description=u'Prénom du conducteur')
+    last_name = Column(db.String(255), label='Nom', description='Nom du conducteur')
+    first_name = Column(db.String(255), label='Prénom',
+            description='Prénom du conducteur')
     birth_date = Column(db.Date(),
-        label=u'Date de naissance (format année-mois-jour)',
-        description=u'Date de naissance (format année-mois-jour)')
+        label='Date de naissance (format année-mois-jour)',
+        description='Date de naissance (format année-mois-jour)')
     professional_licence = Column(db.String(),
-            label=u'Numéro de la carte professionnelle',
-            description=u'Numéro de la carte professionnelle')
+            label='Numéro de la carte professionnelle',
+            description='Numéro de la carte professionnelle')
 
     departement_id = Column(db.Integer, db.ForeignKey('departement.id'),
             nullable=True)
@@ -81,10 +81,10 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
                                                                api=api)
         )
         departement_model._schema = {
-            u'type': 'object',
-            u'anyOf': [
-                {'nom': {u'description': '', u'type': u'string'}},
-                {'numero': {u'description': '', u'type': u'string'}}
+            'type': 'object',
+            'anyOf': [
+                {'nom': {'description': '', 'type': 'string'}},
+                {'numero': {'description': '', 'type': 'string'}}
             ]
         }
         api.add_model("departement", departement_model)
@@ -98,4 +98,4 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
         return not self.__eq__(other)
 
     def __repr__(self):
-        return '<drivers %r>' % unicode(self.id)
+        return '<drivers %r>' % str(self.id)

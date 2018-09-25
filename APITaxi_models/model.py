@@ -9,8 +9,8 @@ from sqlalchemy_defaults import Column
 class Model(db.Model, AsDictMixin, MarshalMixin):
 
     id = Column(db.Integer, primary_key=True)
-    name = Column(db.String, label=u'Dénomination commerciale du modèle',
-                description=u'Dénomination commerciale du modèle',
+    name = Column(db.String, label='Dénomination commerciale du modèle',
+                description='Dénomination commerciale du modèle',
                 unique=True)
 
     def __init__(self, name=None):
@@ -21,7 +21,7 @@ class Model(db.Model, AsDictMixin, MarshalMixin):
             self.name = name
 
     def __repr__(self):
-        return '<Model %r>' % unicode(self.id)
+        return '<Model %r>' % str(self.id)
 
     def __eq__(self, other):
         return self.__repr__() == other.__repr__()
