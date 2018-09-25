@@ -34,62 +34,62 @@ class VehicleDescription(HistoryMixin, db.Model, AsDictMixin):
     __model = db.relationship('Model', lazy='joined')
     constructor_id = Column(db.Integer, db.ForeignKey("constructor.id"))
     __constructor = db.relationship('Constructor', lazy='joined')
-    model_year = Column(db.Integer, label=u'Année', nullable=True,
-            description=u'Année de mise en production du véhicule')
-    engine = Column(db.String(80), label=u'Motorisation', nullable=True,
-            description=u'Motorisation du véhicule, champ P3')
-    horse_power = Column(db.Float(), label=u'Puissance', nullable=True,
-            description=u'Puissance du véhicule en chevaux fiscaux')
-    relais = Column(db.Boolean, label=u'Relais', default=False, nullable=True,
-            description=u'Est-ce un véhicule relais')
-    horodateur = Column(db.String(255), label=u'Horodateur', nullable=True,
-            description=u'Modèle de l\'horodateur')
-    taximetre = Column(db.String(255), label=u'Taximètre', nullable=True,
-            description=u'Modèle du taximètre')
+    model_year = Column(db.Integer, label='Année', nullable=True,
+            description='Année de mise en production du véhicule')
+    engine = Column(db.String(80), label='Motorisation', nullable=True,
+            description='Motorisation du véhicule, champ P3')
+    horse_power = Column(db.Float(), label='Puissance', nullable=True,
+            description='Puissance du véhicule en chevaux fiscaux')
+    relais = Column(db.Boolean, label='Relais', default=False, nullable=True,
+            description='Est-ce un véhicule relais')
+    horodateur = Column(db.String(255), label='Horodateur', nullable=True,
+            description='Modèle de l\'horodateur')
+    taximetre = Column(db.String(255), label='Taximètre', nullable=True,
+            description='Modèle du taximètre')
     date_dernier_ct = Column(db.Date(),
-        label=u'Date du dernier CT (format année-mois-jour)',
-        description=u'Date du dernier contrôle technique')
+        label='Date du dernier CT (format année-mois-jour)',
+        description='Date du dernier contrôle technique')
     date_validite_ct = Column(db.Date(),
-        label=u'Date de la fin de validité du CT (format année-mois-jour)',
-        description=u'Date de fin de validité du contrôle technique')
+        label='Date de la fin de validité du CT (format année-mois-jour)',
+        description='Date de fin de validité du contrôle technique')
     special_need_vehicle = Column(db.Boolean, name='special_need_vehicle',
-            label=u'Véhicule spécialement aménagé pour PMR ', nullable=True)
+            label='Véhicule spécialement aménagé pour PMR ', nullable=True)
     type_ = Column(Enum('sedan', 'mpv', 'station_wagon', 'normal', name='vehicle_type_enum'),
             label='Type', nullable=True)
     luxury = Column(db.Boolean, name='luxury', label='Luxe ?', nullable=True)
     credit_card_accepted = Column(db.Boolean, name='credit_card_accepted',
-            label=u'Carte bancaire acceptée ?', nullable=True)
+            label='Carte bancaire acceptée ?', nullable=True)
     nfc_cc_accepted = Column(db.Boolean, name='nfc_cc_accepted',
-            label=u'Paiement sans contact sur carte bancaire accepté ?',
+            label='Paiement sans contact sur carte bancaire accepté ?',
             nullable=True)
     amex_accepted = Column(db.Boolean, name='amex_accepted',
-            label=u'AMEX acceptée ?', nullable=True)
+            label='AMEX acceptée ?', nullable=True)
     bank_check_accepted = Column(db.Boolean, name='bank_check_accepted',
-            label=u'Chèque bancaire accepté ?', nullable=True)
+            label='Chèque bancaire accepté ?', nullable=True)
     fresh_drink = Column(db.Boolean, name='fresh_drink',
-            label=u'Boisson fraiche ?', nullable=True)
+            label='Boisson fraiche ?', nullable=True)
     dvd_player = Column(db.Boolean, name='dvd_player', label='Lecteur DVD ?',
             nullable=True)
     tablet = Column(db.Boolean, name='tablet', label='Tablette ?',
             nullable=True)
-    wifi = Column(db.Boolean, name='wifi', label=u'Wifi à bord ?',
+    wifi = Column(db.Boolean, name='wifi', label='Wifi à bord ?',
             nullable=True)
-    baby_seat = Column(db.Boolean, name='baby_seat', label=u'Siège bébé ?',
+    baby_seat = Column(db.Boolean, name='baby_seat', label='Siège bébé ?',
             nullable=True)
     bike_accepted = Column(db.Boolean, name='bike_accepted',
-            label=u'Transport de vélo', nullable=True)
+            label='Transport de vélo', nullable=True)
     pet_accepted = Column(db.Boolean, name='pet_accepted',
-            label=u'Animaux de compagnie acceptés ?', nullable=True)
+            label='Animaux de compagnie acceptés ?', nullable=True)
     air_con = Column(db.Boolean, name='air_con',
-            label=u'Véhicule climatisé', nullable=True)
+            label='Véhicule climatisé', nullable=True)
     electronic_toll = Column(db.Boolean, name='electronic_toll',
-            label=u'Véhicule équipé du télépéage', nullable=True)
-    gps = Column(db.Boolean, name='gps', label=u'Véhicule équipé d\'un GPS',
+            label='Véhicule équipé du télépéage', nullable=True)
+    gps = Column(db.Boolean, name='gps', label='Véhicule équipé d\'un GPS',
             nullable=True)
     cpam_conventionne = Column(db.Boolean, name='cpam_conventionne',
-            label=u'Conventionné assurance maladie', nullable=True)
+            label='Conventionné assurance maladie', nullable=True)
     every_destination = Column(db.Boolean, name='every_destination',
-            label=u'Toute destination', nullable=True)
+            label='Toute destination', nullable=True)
     color = Column(db.String(255), name='color', label='Couleur : ',
             nullable=True)
     vehicle_id = Column(db.Integer, db.ForeignKey('vehicle.id'))
@@ -97,8 +97,8 @@ class VehicleDescription(HistoryMixin, db.Model, AsDictMixin):
     _status = Column(Enum(*status_vehicle_description_enum,
         name='status_taxi_enum'), nullable=True, default='free', name='status')
     nb_seats = Column(db.Integer, name='nb_seats',
-            description=u'Nombre de places assises disponibles pour les voyageurs',
-            label=u'Nombre de places')
+            description='Nombre de places assises disponibles pour les voyageurs',
+            label='Nombre de places')
     internal_id = Column(db.String, nullable=True)
     __table_args__ = (db.UniqueConstraint('vehicle_id', 'added_by',
         name="_uq_vehicle_description"),)
@@ -155,6 +155,6 @@ class VehicleDescription(HistoryMixin, db.Model, AsDictMixin):
             'baby_seat', 'wifi', 'tablet', 'dvd_player', 'fresh_drink',
             'amex_accepted', 'bank_check_accepted', 'nfc_cc_accepted',
             'credit_card_accepted', 'luxury']
-        return list(compress(fields, map(lambda f: getattr_(obj, f), fields)))
+        return list(compress(fields, [getattr_(obj, f) for f in fields]))
 
 

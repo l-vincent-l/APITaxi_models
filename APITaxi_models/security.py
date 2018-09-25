@@ -38,36 +38,36 @@ class User(db.Model, UserMixin, MarshalMixin, FilterOr404Mixin,
                             lazy='joined')
     apikey = db.Column(db.String(36), nullable=False)
     hail_endpoint_production = Column(db.String, nullable=True,
-            label=u'Hail endpoint production',
+            label='Hail endpoint production',
             description='Hail endpoint production')
     hail_endpoint_staging = Column(db.String, nullable=True,
-            label=u'Hail endpoint staging',
+            label='Hail endpoint staging',
             description='Hail endpoint staging')
     hail_endpoint_testing = Column(db.String, nullable=True,
-            label=u'Hail endpoint testing',
+            label='Hail endpoint testing',
             description='Hail endpoint testing')
     commercial_name = Column(db.String, nullable=True, label='Nom commercial',
             description='Votre nom commercial')
     phone_number_customer = Column(db.String, nullable=True,
-            label=u'Numéro de téléphone du service client',
-            description=u'Numéro de téléphone de support pour les clients')
+            label='Numéro de téléphone du service client',
+            description='Numéro de téléphone de support pour les clients')
     phone_number_technical = Column(db.String, nullable=True,
-            label=u'Numéro de téléphone du contact technique',
-            description=u'Numéro de téléphone du contact technique')
+            label='Numéro de téléphone du contact technique',
+            description='Numéro de téléphone du contact technique')
     email_customer = Column(db.String, nullable=True,
-            label=u'Email du service client',
-            description=u'Email de support pour les clients')
+            label='Email du service client',
+            description='Email de support pour les clients')
     email_technical = Column(db.String, nullable=True,
-            label=u'Email du contact technique',
-            description=u'Email du contact technique')
+            label='Email du contact technique',
+            description='Email du contact technique')
     logos = db.relationship('Logo', backref="user", lazy='joined')
     operator_header_name = Column(db.String, nullable=True,
-            label=u'Nom du header http pour l\'authentification',
-            description=u"""Cet header sera envoyé lors de la communication
+            label='Nom du header http pour l\'authentification',
+            description="""Cet header sera envoyé lors de la communication
                 de l'ODT vers votre serveur""")
     operator_api_key = Column(db.String, nullable=True,
-            label=u'Valeur de la clé d\'api',
-            description=u"""Valeur de la clé d'api envoyé par l'ODT
+            label='Valeur de la clé d\'api',
+            description="""Valeur de la clé d'api envoyé par l'ODT
             à votre serveur pour l'authentification.""")
 
     def __init__(self, *args, **kwargs):

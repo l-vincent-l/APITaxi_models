@@ -8,8 +8,8 @@ from sqlalchemy_defaults import Column
                     lambda query, name: query.filter(Constructor.name == name.name) if isinstance(name, Constructor) else query.filter(Constructor.name == name))
 class Constructor(db.Model, AsDictMixin, MarshalMixin):
     id = Column(db.Integer, primary_key=True)
-    name = Column(db.String, label=u'Dénomination commerciale de la marque',
-                description=u'Dénomination commerciale de la marque',
+    name = Column(db.String, label='Dénomination commerciale de la marque',
+                description='Dénomination commerciale de la marque',
                 unique=True)
 
     def __init__(self, name=None):
@@ -20,7 +20,7 @@ class Constructor(db.Model, AsDictMixin, MarshalMixin):
             self.name = name
 
     def __repr__(self):
-        return '<Constructor %r>' % unicode(self.name)
+        return '<Constructor %r>' % str(self.name)
 
     def __eq__(self, other):
         return self.__repr__() == other.__repr__()

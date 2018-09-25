@@ -41,17 +41,17 @@ class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
 
     public_fields = set(['numero', 'insee'])
     id = Column(db.Integer, primary_key=True)
-    numero = Column(db.String, label=u'Numéro',
-            description=u'Numéro de l\'ADS')
-    doublage = Column(db.Boolean, label=u'Doublage', default=False,
-            nullable=True, description=u'L\'ADS est elle doublée ?')
-    insee = Column(db.String, label=u'Code INSEE de la commune d\'attribution',
-                   description=u'Code INSEE de la commune d\'attribution')
+    numero = Column(db.String, label='Numéro',
+            description='Numéro de l\'ADS')
+    doublage = Column(db.Boolean, label='Doublage', default=False,
+            nullable=True, description='L\'ADS est elle doublée ?')
+    insee = Column(db.String, label='Code INSEE de la commune d\'attribution',
+                   description='Code INSEE de la commune d\'attribution')
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
     owner_type = Column(Enum(*owner_type_enum, name='owner_type_enum'),
-            label=u'Type Propriétaire')
-    owner_name = Column(db.String, label=u'Nom du propriétaire')
-    category = Column(db.String, label=u'Catégorie de l\'ADS')
+            label='Type Propriétaire')
+    owner_name = Column(db.String, label='Nom du propriétaire')
+    category = Column(db.String, label='Catégorie de l\'ADS')
     zupc_id = db.Column(db.Integer, db.ForeignKey('ZUPC.id'), nullable=True)
 
     @property
@@ -80,7 +80,7 @@ class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
 
 
     def __repr__(self):
-        return '<ADS %r>' % unicode(self.id)
+        return '<ADS %r>' % str(self.id)
 
     def __eq__(self, other):
         return self.__repr__() == other.__repr__()

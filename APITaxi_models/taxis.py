@@ -15,7 +15,7 @@ import time
 from flask import g, current_app
 from sqlalchemy.ext.declarative import declared_attr
 from datetime import datetime
-from itertools import groupby, izip
+from itertools import groupby
 from flask_login import current_user
 
 @with_pattern(r'\d+(\.\d+)?')
@@ -43,7 +43,7 @@ class TaxiRedis(object):
                     for v in caracs_list
             }
         if self._caracs:
-            self._min_caracs = min(self._caracs.values(), key=lambda v: v['timestamp'])
+            self._min_caracs = min(list(self._caracs.values()), key=lambda v: v['timestamp'])
         else:
             self._min_caracs = None
 
@@ -73,7 +73,7 @@ class TaxiRedis(object):
     def caracs(self, min_time):
         if self._caracs is None:
             self._caracs = self.__class__.retrieve_caracs(self.id)
-        for i in self._caracs.iteritems():
+        for i in self._caracs.items():
             if i[1]['timestamp'] < min_time:
                 continue
             yield i
@@ -88,14 +88,14 @@ class TaxiRedis(object):
             return p['timestamp'] > min_time
         else:
             try:
-                self.caracs(min_time).next()
+                next(self.caracs(min_time))
             except StopIteration:
                 return False
             return True
 
     @staticmethod
     def transform_caracs(caracs):
-        return {k.decode(): TaxiRedis.parse_redis(v) for k, v in caracs.iteritems()}
+        return {k.decode(): TaxiRedis.parse_redis(v) for k, v in list(caracs.items())}
 
     @classmethod
     def retrieve_caracs(cls, id_):
@@ -111,7 +111,7 @@ class TaxiRedis(object):
     def get_operator(self, min_time=None, favorite_operator=None):
         min_time = self.set_min_time(min_time)
         possibilities = self.get_fresh_operateurs_timestamps(min_time)
-        fav = filter(lambda v: v[0] == favorite_operator, possibilities)
+        fav = [v for v in possibilities if v[0] == favorite_operator]
         if fav:
             return fav[0]
         return max(possibilities, lambda v: v[1]) if possibilities else (None, None)
@@ -131,12 +131,10 @@ class TaxiRedis(object):
     def _is_free(self, descriptions, func_added_by, func_status, min_time=None):
         if not min_time:
             min_time = int(time.time() - self._DISPONIBILITY_DURATION)
-        users = map(lambda u_c : u_c[0],
-                    self.get_fresh_operateurs_timestamps(min_time))
+        users = [u_c[0] for u_c in self.get_fresh_operateurs_timestamps(min_time)]
         return len(users) > 0 and\
-                all(map(lambda desc: func_added_by(desc) not in users\
-                    or func_status(desc) == 'free',
-                    descriptions))
+                all([func_added_by(desc) not in users\
+                    or func_status(desc) == 'free' for desc in descriptions])
 
 
     def set_avaibility(self, operator_email, status):
@@ -341,7 +339,7 @@ LEFT OUTER JOIN departement ON departement.id = driver.departement_id
 LEFT OUTER JOIN "user" AS u ON u.id = vehicle_description.added_by
 WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
     [", ".join(["{0}.{1} AS {2}_{1}".format(k, v2, k.replace('"', '')) for v2 in v])
-        for k, v  in fields_get.items()])
+        for k, v  in list(fields_get.items())])
     )
 
     @staticmethod
@@ -361,7 +359,7 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
                 return None
         elif timestamps:
             timestamp, operator = -1, None
-            for t, ts in izip(taxi_db, timestamps):
+            for t, ts in zip(taxi_db, timestamps):
                 if not ts:
                     continue
                 if favorite_operator and t['u_email'] == favorite_operator:
@@ -420,7 +418,7 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
     @staticmethod
     def get(ids=None, operateur_id=None,id_=None):
        res = [dict(v) for v in db.engine.execute(RawTaxi.request_in,  [(tuple(ids),)]).fetchall()]
-       res = map(lambda v: list(v[1]), groupby(res, lambda t: t['taxi_id']),)
+       res = list(map(lambda v: list(v[1]), groupby(res, lambda t: t['taxi_id']),))
        orders_res = {v[0]['taxi_id']:i for i, v in enumerate(res)}
        l_r = [res[orders_res[id_]] if id_ in orders_res else None for id_ in ids]
        return [RawTaxi.filter_operateur_id(l, operateur_id) for l in l_r if l]
