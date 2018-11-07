@@ -149,7 +149,7 @@ class Hail(HistoryMixin, db.Model, AsDictMixin, GetOr404Mixin):
             current_app.config['REDIS_GEOINDEX'],
             '{}:{}'.format(kwargs['taxi_id'], self.operateur.email))
         if taxi_pos:
-            self.initial_taxi_lat, self.initial_taxi_lon = taxi_pos[0]
+            self.initial_taxi_lon, self.initial_taxi_lat = taxi_pos[0]
         db.session.add(self)
         db.session.commit()
         taxi = TaxiM.query.get(kwargs['taxi_id'])
