@@ -437,7 +437,7 @@ class HailLog(object):
             to_store['return'] = to_store['return'].decode() if hasattr(to_store['return'], "decode") else to_store['return']
             to_store['code'] = response.status_code
         to_store_json = json.dumps(to_store)
-        redis_store.zadd(name, self.datetime, to_store_json)
+        redis_store.zadd(name, {to_store_json: self.datetime})
         redis_store.expire(name, timedelta(weeks=6))
 
     @classmethod
