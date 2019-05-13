@@ -144,7 +144,7 @@ class TaxiRedis(object):
                 current_app.config['REDIS_NOT_AVAILABLE'], taxi_id_operator)
         else:
             current_app.extensions['redis'].zadd(
-                current_app.config['REDIS_NOT_AVAILABLE'], 0., taxi_id_operator)
+                current_app.config['REDIS_NOT_AVAILABLE'], {taxi_id_operator: 0.})
 
 def query_func(query, driver, vehicle, ads, **kwargs):
     departement = Departement.filter_by_or_404(numero=str(driver['departement']))
