@@ -148,6 +148,15 @@ class TaxiRedis(object):
             current_app.extensions['redis'].zadd(
                 current_app.config['REDIS_NOT_AVAILABLE'], {taxi_id_operator: 0.})
 
+    def not_available_ids(self, lon, lat, name_redis, radius, store_key):
+        redis_store.georadius(current_app.config['REDIS_GEOINDEX'], lon, lat, radius, 'm',
+                              store_dist=store_key)
+        redis_store.zinterstore(store_key, [store_key,
+                                current_app.config['REDIS_TIMESTAMPS'],
+                                current_app.config['REDIS_NOT_AVAILABLE']])
+        return {t[0].decode().split(':')[0] for t
+                              in redis_store.zscan_iter(store_key)}
+
 def query_func(query, driver, vehicle, ads, **kwargs):
     departement = Departement.filter_by_or_404(numero=str(driver['departement']))
     driver = Driver.filter_by_or_404(
