@@ -6,6 +6,7 @@ from geoalchemy2 import Geography
 from geoalchemy2.shape import to_shape
 from shapely.prepared import prep
 from sqlalchemy import func, Index
+from shapely.geometry import Point
 from datetime import datetime
 from flask import current_app
 
@@ -76,10 +77,16 @@ class ZUPC(db.Model, MarshalMixin):
         else:
             return inactive_filter_period[0] <= hour <= inactive_filter_period[1]
 
-    def get_max_distance(self, zupc_customer):
+    @classmethod
+    def get_max_distance(cls, zupc_customer):
         #We can deactivate the max radius for a certain zone
-        if self.is_inactive:
+        if cls.is_inactive_period:
             return current_app.config['DEFAULT_MAX_RADIUS']
         else:
             return min([v for v in [v[2] for v in zupc_customer] if v and v>0]
                            + [current_app.config['DEFAULT_MAX_RADIUS']])
+
+    @staticmethod
+    def is_limited_zone(lon, lat):
+        return current_app.config['LIMITED_ZONE'] and\
+            not Point(lon, lat).intersects(current_app.config['LIMITED_ZONE'])
