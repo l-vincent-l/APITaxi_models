@@ -18,6 +18,7 @@ from datetime import datetime
 from itertools import groupby
 from flask_login import current_user
 from flask_restplus import abort
+from shapely.geometry import Point
 
 @with_pattern(r'\d+(\.\d+)?')
 def parse_number(str_):
@@ -313,6 +314,23 @@ class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
             return
         description = self.vehicle.get_description(hail.operateur)
         description.status = next_status
+
+    def is_in_zone(self, taxi, lon, lat, zupc_customer, parent_zupc):
+        if not taxi:
+            current_app.logger.debug('Taxi {} not fount in db')
+            return False
+        taxi = taxi[0]
+        zupc_id = taxi['ads_zupc_id']
+        if not zupc_id in list(zupc_customer.keys()):
+            current_app.logger.debug('Taxi {} not in customer\'s zone'.format(
+                taxi.get('taxi_id', 'no id')))
+            return False
+        if not zupc_customer[parent_zupc[zupc_id]].contains(
+                        Point(float(lon), float(lat)):
+            current_app.logger.debug('Taxi {} is not in its zone'.format(
+                taxi.get('taxi_id', 'no id')))
+            return False
+        return True
 
 
 
