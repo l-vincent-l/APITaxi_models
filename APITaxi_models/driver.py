@@ -4,6 +4,7 @@ from APITaxi_utils.mixins import (GetOr404Mixin, AsDictMixin, HistoryMixin,
     FilterOr404Mixin)
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy_defaults import Column
+from sqlalchemy import Index
 from flask_restplus import abort, fields
 
 class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
@@ -99,3 +100,6 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
 
     def __repr__(self):
         return '<drivers %r>' % str(self.id)
+
+driver_professional_licence_index = Index('driver_professional_licence_idx', Driver.professional_licence)
+driver_departement_id_index = Index('driver_departement_id_idx', Driver.departement_id)
