@@ -148,7 +148,8 @@ class TaxiRedis(object):
             current_app.extensions['redis'].zadd(
                 current_app.config['REDIS_NOT_AVAILABLE'], {taxi_id_operator: 0.})
 
-    def not_available_ids(self, lon, lat, name_redis, radius, store_key):
+    @staticmethod
+    def not_available_ids(lon, lat, name_redis, radius, store_key, redis_store):
         redis_store.georadius(current_app.config['REDIS_GEOINDEX'], lon, lat, radius, 'm',
                               store_dist=store_key)
         redis_store.zinterstore(store_key, [store_key,
@@ -324,7 +325,8 @@ class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
         description = self.vehicle.get_description(hail.operateur)
         description.status = next_status
 
-    def is_in_zone(self, taxi, lon, lat, zupc_customer, parent_zupc):
+    @staticmethod
+    def is_in_zone(taxi, lon, lat, zupc_customer, parent_zupc):
         if not taxi:
             current_app.logger.debug('Taxi {} not fount in db')
             return False
@@ -335,7 +337,7 @@ class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
                 taxi.get('taxi_id', 'no id')))
             return False
         if not zupc_customer[parent_zupc[zupc_id]].contains(
-                        Point(float(lon), float(lat)):
+                        Point(float(lon), float(lat))):
             current_app.logger.debug('Taxi {} is not in its zone'.format(
                 taxi.get('taxi_id', 'no id')))
             return False
