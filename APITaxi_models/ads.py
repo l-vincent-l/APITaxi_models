@@ -4,6 +4,7 @@ from APITaxi_utils.mixins import AsDictMixin, HistoryMixin, FilterOr404Mixin
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy_defaults import Column
 from sqlalchemy.types import Enum
+from sqlalchemy import Index
 from APITaxi_utils import fields
 
 owner_type_enum = ['company', 'individual']
@@ -87,3 +88,7 @@ class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+ads_numero_index = Index('ads_numero_index', ADS.numero)
+ads_insee_index = Index('ads_insee_index', ADS.insee)
