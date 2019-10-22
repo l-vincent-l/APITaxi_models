@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from . import db
 from sqlalchemy_defaults import Column
+from sqlalchemy import Index
 from APITaxi_utils.mixins import MarshalMixin, FilterOr404Mixin
 
 class Departement(db.Model, MarshalMixin, FilterOr404Mixin):
@@ -10,3 +11,6 @@ class Departement(db.Model, MarshalMixin, FilterOr404Mixin):
 
     def __str__(self):
         return '%s' % (self.numero)
+
+
+departement_numero_index = Index('departement_numero_index', Departement.numero)
