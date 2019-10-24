@@ -6,7 +6,7 @@ from APITaxi_utils.mixins import MarshalMixin, FilterOr404Mixin
 class Departement(db.Model, MarshalMixin, FilterOr404Mixin):
     id = Column(db.Integer, primary_key=True)
     nom = Column(db.String(255), label='Nom')
-    numero = Column(db.String(3), label='Numero')
+    numero = Column(db.String(3), label='Numero', unique=True)
 
     def __str__(self):
         return '%s' % (self.numero)
