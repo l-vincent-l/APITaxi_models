@@ -158,6 +158,20 @@ class TaxiRedis(object):
         return {t[0].decode().split(':')[0] for t
                               in redis_store.zscan_iter(store_key)}
 
+    @staticmethod
+    def store_positions(lon, lat, max_distance, t, redis_store):
+        name_redis = '{}:{}:{}'.format(lon, lat, t)
+        if not hasattr(g, 'keys_to_delete'):
+            g.keys_to_delete = []
+        g.keys_to_delete.append(name_redis)
+        #It returns a list of all taxis near the given point
+        #For each taxi you have a tuple with: (id, distance, [lat, lon])
+        nb_positions = redis_store.georadius(current_app.config['REDIS_GEOINDEX_ID'],
+                lon, lat, radius=max_distance, unit='m', store_dist=name_redis)
+        if nb_positions == 0:
+            current_app.logger.debug('No taxi found at {}, {}'.format(lat, lon))
+        return nb_positions
+
 def query_func(query, driver, vehicle, ads, **kwargs):
     departement = Departement.filter_by_or_404(numero=str(driver['departement']))
     driver = Driver.filter_by_or_404(
