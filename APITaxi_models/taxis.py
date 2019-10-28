@@ -345,13 +345,13 @@ class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
             current_app.logger.debug('Taxi {} not fount in db')
             return False
         taxi = taxi[0]
-        zupc_id = taxi['ads_zupc_id']
-        if not zupc_id in list(zupc_customer.keys()):
+        taxi_zupc_id = parent_zupc[taxi['ads_zupc_id']]
+        zupc = next(filter(lambda z: z.id == taxi_zupc_id, zupc_customer), None)
+        if zupc is None:
             current_app.logger.debug('Taxi {} not in customer\'s zone'.format(
                 taxi.get('taxi_id', 'no id')))
             return False
-        if not zupc_customer[parent_zupc[zupc_id]].contains(
-                        Point(float(lon), float(lat))):
+        if zupc.shape.contains(Point(float(lon), float(lat))) is None:
             current_app.logger.debug('Taxi {} is not in its zone'.format(
                 taxi.get('taxi_id', 'no id')))
             return False
