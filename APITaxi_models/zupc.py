@@ -69,7 +69,8 @@ class ZUPC(db.Model, MarshalMixin):
     def right(self):
         return self.bounds[2]
 
-    def is_inactive(self):
+    @staticmethod
+    def is_inactive_period():
         inactive_filter_period = current_app.config['INACTIVE_FILTER_PERIOD']
         hour = datetime.now().hour
         if inactive_filter_period[0] > inactive_filter_period[1]:
@@ -90,3 +91,17 @@ class ZUPC(db.Model, MarshalMixin):
     def is_limited_zone(lon, lat):
         return current_app.config['LIMITED_ZONE'] and\
             not Point(lon, lat).intersects(current_app.config['LIMITED_ZONE'])
+
+    @classmethod
+    def get(cls, lon, lat):
+        if cls.is_limited_zone(lon, lat):
+            current_app.logger.debug("{} {} is in limited zone".format(lon, lat))
+            return []
+        r = db.session.query(cls). \
+            filter(
+                func.ST_Intersects(cls.shape, 'Point({} {})'.format(lon, lat)),
+            ). \
+            filter(cls.parent_id == cls.id)
+        if not r:
+            current_app.logger.debug("No ZUPC found for {} {}".format(lon, lat))
+        return r
