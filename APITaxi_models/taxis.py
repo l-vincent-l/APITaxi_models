@@ -415,19 +415,15 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
                     timestamp, operator = ts, t['u_email']
         else:
             timestamp = None
-        taxi = None
-        for t in taxi_db:
-            if t['u_email'] == operator:
-                taxi = t
-                break
+        taxi = next(filter(lambda t: t['u_email'] == operator, taxi_db), None)
         if not taxi:
             return None
         characs = VehicleDescription.get_characs(
-                lambda o, f: o.get('vehicle_description_{}'.format(f)), t)
+                lambda o, f: o.get('vehicle_description_{}'.format(f)), taxi)
         return {
             "id": taxi_id,
-            "internal_id": t['vehicle_description_internal_id'],
-            "operator": t['u_email'],
+            "internal_id": taxi['vehicle_description_internal_id'],
+            "operator": taxi['u_email'],
             "position": taxi_redis.coords if taxi_redis else position,
             "vehicle": {
                 "model": taxi['model_name'],
