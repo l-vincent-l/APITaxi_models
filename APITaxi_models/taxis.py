@@ -149,14 +149,17 @@ class TaxiRedis(object):
                 current_app.config['REDIS_NOT_AVAILABLE'], {taxi_id_operator: 0.})
 
     @staticmethod
-    def not_available_ids(lon, lat, name_redis, radius, store_key, redis_store):
+    def remove_not_available(lon, lat, positions_redis, radius, redis_store):
+        unavailable_redis = positions_redis + '_unavailable'
+        g.keys_to_delete.append(unavailable_redis)
         redis_store.georadius(current_app.config['REDIS_GEOINDEX'], lon, lat, radius, 'm',
-                              store_dist=store_key)
-        redis_store.zinterstore(store_key, [store_key,
+                              store_dist=unavailable_redis)
+        redis_store.zinterstore(unavailable_redis, [unavailable_redis,
                                 current_app.config['REDIS_TIMESTAMPS'],
                                 current_app.config['REDIS_NOT_AVAILABLE']])
-        return {t[0].decode().split(':')[0] for t
-                              in redis_store.zscan_iter(store_key)}
+        taxis_ids_unavailable =  {t[0].decode().split(':')[0] for t in redis_store.zscan_iter(unavailable_redis)}
+        if taxis_ids_unavailable:
+            redis_store.zrem(positions_redis, *taxis_ids_unavailable)
 
     @staticmethod
     def store_positions(lon, lat, max_distance, t, redis_store):
