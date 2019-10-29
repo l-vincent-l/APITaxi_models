@@ -162,15 +162,14 @@ class TaxiRedis(object):
             redis_store.zrem(positions_redis, *taxis_ids_unavailable)
 
     @staticmethod
-    def store_positions(lon, lat, max_distance, t, redis_store):
-        name_redis = '{}:{}:{}'.format(lon, lat, t)
+    def store_positions(lon, lat, max_distance, t, redis_store, positions_redis):
         if not hasattr(g, 'keys_to_delete'):
             g.keys_to_delete = []
-        g.keys_to_delete.append(name_redis)
+        g.keys_to_delete.append(positions_redis)
         #It returns a list of all taxis near the given point
         #For each taxi you have a tuple with: (id, distance, [lat, lon])
         nb_positions = redis_store.georadius(current_app.config['REDIS_GEOINDEX_ID'],
-                lon, lat, radius=max_distance, unit='m', store_dist=name_redis)
+                lon, lat, radius=max_distance, unit='m', store_dist=positions_redis)
         if nb_positions == 0:
             current_app.logger.debug('No taxi found at {}, {}'.format(lat, lon))
         return nb_positions
