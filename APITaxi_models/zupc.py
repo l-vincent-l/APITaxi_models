@@ -81,10 +81,10 @@ class ZUPC(db.Model, MarshalMixin):
     @classmethod
     def get_max_distance(cls, zupc_customer):
         #We can deactivate the max radius for a certain zone
-        if cls.is_inactive_period:
+        if cls.is_inactive_period():
             return current_app.config['DEFAULT_MAX_RADIUS']
         else:
-            return min([v for v in [v[2] for v in zupc_customer] if v and v>0]
+            return min([z.max_distance for z in zupc_customer if z.max_distance and z.max_distance>0])
                            + [current_app.config['DEFAULT_MAX_RADIUS']])
 
     @staticmethod
@@ -101,7 +101,7 @@ class ZUPC(db.Model, MarshalMixin):
             filter(
                 func.ST_Intersects(cls.shape, 'Point({} {})'.format(lon, lat)),
             ). \
-            filter(cls.parent_id == cls.id)
+            filter(cls.parent_id == cls.id).all()
         if not r:
             current_app.logger.debug("No ZUPC found for {} {}".format(lon, lat))
         return r
