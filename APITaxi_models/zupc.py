@@ -84,8 +84,7 @@ class ZUPC(db.Model, MarshalMixin):
         if cls.is_inactive_period():
             return current_app.config['DEFAULT_MAX_RADIUS']
         else:
-            return min([z.max_distance for z in zupc_customer if z.max_distance and z.max_distance>0])
-                           + [current_app.config['DEFAULT_MAX_RADIUS']])
+            return min([z.max_distance for z in zupc_customer if z.max_distance and z.max_distance>0] + [current_app.config['DEFAULT_MAX_RADIUS']])
 
     @staticmethod
     def is_limited_zone(lon, lat):
