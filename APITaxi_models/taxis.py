@@ -342,18 +342,20 @@ class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
         description.status = next_status
 
     @staticmethod
-    def is_in_zone(taxi, lon, lat, zupc_customer, parent_zupc):
+    def is_in_zone(taxi, lon, lat, zupc_customer):
         if not taxi:
             current_app.logger.debug('Taxi {} not fount in db')
             return False
         taxi = taxi[0]
-        taxi_zupc_id = parent_zupc[taxi['ads_zupc_id']]
-        zupc = next(filter(lambda z: z.id == taxi_zupc_id, zupc_customer), None)
-        if zupc is None:
+        taxi_zupc_id = taxi['ads_zupc_id']
+        #zupc that match the one of a taxi, and the one of the customers
+        zupc_list = filter(lambda zupc: zupc.id == taxi_zupc_id, zupc_customer)
+        if not zupc_list:
             current_app.logger.debug('Taxi {} not in customer\'s zone'.format(
                 taxi.get('taxi_id', 'no id')))
             return False
-        if zupc.shape.contains(Point(float(lon), float(lat))) is None:
+        taxi_position = Point(float(lon), float(lat))
+        if not filter(lambda zupc: zupc.shape.contains(taxi_position)), zupc_list):
             current_app.logger.debug('Taxi {} is not in its zone'.format(
                 taxi.get('taxi_id', 'no id')))
             return False
