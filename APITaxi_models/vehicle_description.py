@@ -101,7 +101,7 @@ class VehicleDescription(HistoryMixin, db.Model, AsDictMixin):
             label='Nombre de places')
     internal_id = Column(db.String, nullable=True)
     __table_args__ = (db.UniqueConstraint('vehicle_id', 'added_by',
-        name="_uq_vehicle_description"),)
+        name="uq_vehicle_description"),)
 
     @property
     def status(self):

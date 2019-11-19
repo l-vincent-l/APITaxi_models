@@ -5,6 +5,7 @@ from APITaxi_utils.mixins import MarshalMixin, FilterOr404Mixin
 from geoalchemy2 import Geography
 from geoalchemy2.shape import to_shape
 from shapely.prepared import prep
+from sqlalchemy import func, Index
 
 
 class ZUPC(db.Model, MarshalMixin):
@@ -23,6 +24,7 @@ class ZUPC(db.Model, MarshalMixin):
     __geom = None
     __preped_geom = None
     __bounds = None
+    __table_args__ = (Index('zupc_shape_idx', 'shape'), Index('zupc_shape_igx', 'shape'))
 
     def __repr__(self):
         return '<ZUPC %r>' % str(self.id)
