@@ -166,8 +166,8 @@ class TaxiRedis(object):
         if not hasattr(g, 'keys_to_delete'):
             g.keys_to_delete = []
         g.keys_to_delete.append(positions_redis)
-        #It returns a list of all taxis near the given point
-        #For each taxi you have a tuple with: (id, distance, [lat, lon])
+        #It stores a list of all taxis near the given point in store_dist,
+        #and return the length of this list
         nb_positions = redis_store.georadius(current_app.config['REDIS_GEOINDEX_ID'],
                 lon, lat, radius=max_distance, unit='m', store_dist=positions_redis)
         if nb_positions == 0:
