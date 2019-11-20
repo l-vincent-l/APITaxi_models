@@ -6,6 +6,9 @@ from geoalchemy2 import Geography
 from geoalchemy2.shape import to_shape
 from shapely.prepared import prep
 from sqlalchemy import func, Index
+from shapely.geometry import Point
+from datetime import datetime
+from flask import current_app
 
 
 class ZUPC(db.Model, MarshalMixin):
@@ -65,3 +68,39 @@ class ZUPC(db.Model, MarshalMixin):
     @property
     def right(self):
         return self.bounds[2]
+
+    @staticmethod
+    def is_inactive_period():
+        inactive_filter_period = current_app.config['INACTIVE_FILTER_PERIOD']
+        hour = datetime.now().hour
+        if inactive_filter_period[0] > inactive_filter_period[1]:
+            return hour >= inactive_filter_period[0] or hour <= inactive_filter_period[1]
+        else:
+            return inactive_filter_period[0] <= hour <= inactive_filter_period[1]
+
+    @classmethod
+    def get_max_distance(cls, zupc_customer):
+        #We can deactivate the max radius for a certain zone
+        if cls.is_inactive_period():
+            return current_app.config['DEFAULT_MAX_RADIUS']
+        else:
+            return min([z.max_distance for z in zupc_customer if z.max_distance and z.max_distance>0] + [current_app.config['DEFAULT_MAX_RADIUS']])
+
+    @staticmethod
+    def is_limited_zone(lon, lat):
+        return current_app.config['LIMITED_ZONE'] and\
+            not Point(lon, lat).intersects(current_app.config['LIMITED_ZONE'])
+
+    @classmethod
+    def get(cls, lon, lat):
+        if cls.is_limited_zone(lon, lat):
+            current_app.logger.debug("{} {} is in limited zone".format(lon, lat))
+            return []
+        r = db.session.query(cls). \
+            filter(
+                func.ST_Intersects(cls.shape, 'Point({} {})'.format(lon, lat)),
+            ). \
+            filter(cls.parent_id == cls.id).all()
+        if not r:
+            current_app.logger.debug("No ZUPC found for {} {}".format(lon, lat))
+        return r

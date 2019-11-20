@@ -18,6 +18,7 @@ from datetime import datetime
 from itertools import groupby
 from flask_login import current_user
 from flask_restplus import abort
+from shapely.geometry import Point
 
 @with_pattern(r'\d+(\.\d+)?')
 def parse_number(str_):
@@ -146,6 +147,32 @@ class TaxiRedis(object):
         else:
             current_app.extensions['redis'].zadd(
                 current_app.config['REDIS_NOT_AVAILABLE'], {taxi_id_operator: 0.})
+
+    @staticmethod
+    def remove_not_available(lon, lat, positions_redis, radius, redis_store):
+        unavailable_redis = positions_redis + '_unavailable'
+        g.keys_to_delete.append(unavailable_redis)
+        redis_store.georadius(current_app.config['REDIS_GEOINDEX'], lon, lat, radius, 'm',
+                              store_dist=unavailable_redis)
+        redis_store.zinterstore(unavailable_redis, [unavailable_redis,
+                                current_app.config['REDIS_TIMESTAMPS'],
+                                current_app.config['REDIS_NOT_AVAILABLE']])
+        taxis_ids_unavailable =  {t[0].decode().split(':')[0] for t in redis_store.zscan_iter(unavailable_redis)}
+        if taxis_ids_unavailable:
+            redis_store.zrem(positions_redis, *taxis_ids_unavailable)
+
+    @staticmethod
+    def store_positions(lon, lat, max_distance, t, redis_store, positions_redis):
+        if not hasattr(g, 'keys_to_delete'):
+            g.keys_to_delete = []
+        g.keys_to_delete.append(positions_redis)
+        #It stores a list of all taxis near the given point in store_dist,
+        #and return the length of this list
+        nb_positions = redis_store.georadius(current_app.config['REDIS_GEOINDEX_ID'],
+                lon, lat, radius=max_distance, unit='m', store_dist=positions_redis)
+        if nb_positions == 0:
+            current_app.logger.debug('No taxi found at {}, {}'.format(lat, lon))
+        return nb_positions
 
 def query_func(query, driver, vehicle, ads, **kwargs):
     departement = Departement.filter_by_or_404(numero=str(driver['departement']))
@@ -314,6 +341,26 @@ class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
         description = self.vehicle.get_description(hail.operateur)
         description.status = next_status
 
+    @staticmethod
+    def is_in_zone(taxi, lon, lat, zupc_customer):
+        if not taxi:
+            current_app.logger.debug('Taxi {} not fount in db')
+            return False
+        taxi = taxi[0]
+        taxi_zupc_id = taxi['ads_zupc_id']
+        #zupc that match the one of a taxi, and the one of the customers
+        zupc_list = list(filter(lambda zupc: zupc.id == taxi_zupc_id, zupc_customer))
+        if not zupc_list:
+            current_app.logger.debug('Taxi {} not in customer\'s zone'.format(
+                taxi.get('taxi_id', 'no id')))
+            return False
+        taxi_position = Point(float(lon), float(lat))
+        if not list(filter(lambda zupc: zupc.shape.contains(taxi_position), zupc_list)):
+            current_app.logger.debug('Taxi {} is not in its zone'.format(
+                taxi.get('taxi_id', 'no id')))
+            return False
+        return True
+
 
 
 class RawTaxi(object):
@@ -370,19 +417,15 @@ WHERE taxi.id IN %s ORDER BY taxi.id""".format(", ".join(
                     timestamp, operator = ts, t['u_email']
         else:
             timestamp = None
-        taxi = None
-        for t in taxi_db:
-            if t['u_email'] == operator:
-                taxi = t
-                break
+        taxi = next(filter(lambda t: t['u_email'] == operator, taxi_db), None)
         if not taxi:
             return None
         characs = VehicleDescription.get_characs(
-                lambda o, f: o.get('vehicle_description_{}'.format(f)), t)
+                lambda o, f: o.get('vehicle_description_{}'.format(f)), taxi)
         return {
             "id": taxi_id,
-            "internal_id": t['vehicle_description_internal_id'],
-            "operator": t['u_email'],
+            "internal_id": taxi['vehicle_description_internal_id'],
+            "operator": taxi['u_email'],
             "position": taxi_redis.coords if taxi_redis else position,
             "vehicle": {
                 "model": taxi['model_name'],
