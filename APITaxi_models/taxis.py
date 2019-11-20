@@ -355,7 +355,7 @@ class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
                 taxi.get('taxi_id', 'no id')))
             return False
         taxi_position = Point(float(lon), float(lat))
-        if not list(filter(lambda zupc: zupc.shape.contains(taxi_position), zupc_list)):
+        if not list(filter(lambda zupc: zupc.geom.contains(taxi_position), zupc_list)):
             current_app.logger.debug('Taxi {} is not in its zone'.format(
                 taxi.get('taxi_id', 'no id')))
             return False
