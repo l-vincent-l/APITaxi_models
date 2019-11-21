@@ -23,8 +23,7 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
 
     departement_id = Column(db.Integer, db.ForeignKey('departement.id'),
             nullable=True)
-    __departement = db.relationship('Departement', backref='vehicle',
-            lazy="joined")
+    _departement = db.relationship('Departement', lazy="joined")
 
     @declared_attr
     def added_by(cls):
@@ -33,32 +32,32 @@ class Driver(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
     def __init__(self, *args, **kwargs):
         db.Model.__init__(self, *args, **kwargs)
         HistoryMixin.__init__(self)
-        db.session.add(self)
-        db.session.commit()
-        cur = db.session.connection().connection.cursor()
-        cur.execute("""
-                UPDATE taxi set driver_id = %s WHERE driver_id IN (
-                    SELECT id FROM driver WHERE professional_licence = %s
-                    AND departement_id = %s
-                )""",
-                (self.id, self.professional_licence, self.departement_id)
-            )
+        current_driver = Driver.query.filter_by(
+                professional_licence=kwargs['professional_licence'],
+                departement_id=self.departement.id
+            ).order_by(
+                Driver.id.desc()
+            ).first()
+        if current_driver:
+            self.id = current_driver.id
+            db.session.merge(self)
+        else:
+            db.session.add(self)
         db.session.commit()
 
     @property
     def departement(self):
-        return self.__departement
+        return self._departement
 
     def set_from_nom(self, kwargs):
         if "nom" in kwargs and kwargs['nom'] is not None:
-            self.__departement = Departement.query.filter(Departement.nom.ilike(kwargs["nom"])).first()
-        return self.__departement is not None
+            self._departement = Departement.query.filter(Departement.nom.ilike(kwargs["nom"])).first()
+        return self._departement is not None
 
     def set_from_departement(self, kwargs):
         if "numero" in kwargs and kwargs['numero'] is not None:
-            self.__departement = Departement.query.filter_by(numero=kwargs["numero"]).first()
-        return self.__departement is not None
-
+            self._departement = Departement.query.filter_by(numero=kwargs["numero"]).first()
+        return self._departement is not None
 
     @departement.setter
     def departement(self, kwargs):
