@@ -21,13 +21,19 @@ class Vehicle(db.Model, AsDictMixin, MarshalMixin, FilterOr404Mixin):
     def __init__(self, *args, **kwargs):
         from . import Taxi, RawTaxi
         db.Model.__init__(self, licence_plate=kwargs['licence_plate'])
-        db.session.add(self)
-        db.session.commit()
+        current_vehicle = Vehicle.query.filter_by(
+                licence_plate=self.licence_plate
+            ).order_by(
+                Vehicle.id.desc()
+            ).first()
+        if current_vehicle:
+            self.id = current_vehicle.id
+        else:
+            db.session.add(self)
+            db.session.flush()
         del kwargs['licence_plate']
         desc = VehicleDescription(vehicle_id=self.id, status='off', **kwargs)
         db.session.add(desc)
-        for taxi in Taxi.query.filter_by(vehicle_id=self.id).all():
-            RawTaxi.flush(taxi.id)
         db.session.commit()
 
     @classmethod
