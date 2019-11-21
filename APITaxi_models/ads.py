@@ -26,14 +26,17 @@ class ADS(db.Model, HistoryMixin, AsDictMixin, FilterOr404Mixin):
         kwargs['zupc_id'] = self.get_zupc_id(**kwargs)
         db.Model.__init__(self, *args, **kwargs)
         HistoryMixin.__init__(self)
-        db.session.add(self)
-        db.session.commit()
-        cur = db.session.connection().connection.cursor()
-        cur.execute(""" UPDATE taxi set ads_id = %s WHERE ads_id IN (
-                                SELECT id FROM "ADS"  WHERE numero = %s
-                                AND insee = %s)
-                        """, (self.id, self.numero, self.insee)
-        )
+        current_ads = ADS.query.filter_by(
+                numero=self.numero,
+                insee=self.insee
+            ).order_by(
+                ADS.id.desc()
+            ).first()
+        if current_ads:
+            self.id = current_ads.id
+            db.session.merge(self)
+        else:
+            db.session.add(self)
         db.session.commit()
 
     @declared_attr
