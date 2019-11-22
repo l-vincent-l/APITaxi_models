@@ -223,18 +223,17 @@ class Taxi(db.Model, HistoryMixin, AsDictMixin, GetOr404Mixin,
     id = Column(db.String, primary_key=True)
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'),
             nullable=True)
-    vehicle = db.relationship('Vehicle', backref='vehicle_taxi', lazy='joined')
+    vehicle = db.relationship('Vehicle', lazy='joined')
     ads_id = db.Column(db.Integer, db.ForeignKey('ADS.id'), nullable=True)
-    ads = db.relationship('ADS', backref='ads', lazy='joined')
+    ads = db.relationship('ADS', lazy='joined')
     driver_id = db.Column(db.Integer, db.ForeignKey('driver.id'),
             nullable=True)
-    driver = db.relationship('Driver', backref='driver', lazy='joined')
+    driver = db.relationship('Driver', lazy='joined')
     rating = db.Column(db.Float, default=4.5)
     current_hail_id = db.Column(db.String,
                     db.ForeignKey('hail.id', name='taxi_hail_id', use_alter=True),
                     nullable=True)
-    current_hail = db.relationship('Hail', backref='hail', post_update=True,
-                                  foreign_keys=[current_hail_id])
+    current_hail = db.relationship('Hail', post_update=True, foreign_keys=[current_hail_id])
 
     _ACTIVITY_TIMEOUT = 15*60 #Used for dash
 

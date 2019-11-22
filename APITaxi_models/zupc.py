@@ -18,8 +18,7 @@ class ZUPC(db.Model, MarshalMixin):
     insee = Column(db.String(), nullable=True)
     shape = Column(Geography(geometry_type='MULTIPOLYGON', srid=4326,
         spatial_index=False), label='Geography of the shape')
-    departement = db.relationship('Departement',
-            backref=db.backref('departements'), lazy='joined')
+    departement = db.relationship('Departement', lazy='joined')
     parent_id = Column(db.Integer, db.ForeignKey('ZUPC.id'))
     parent = db.relationship('ZUPC', remote_side=[id], lazy='joined')
     active = Column(db.Boolean, default=False)

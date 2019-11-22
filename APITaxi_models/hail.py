@@ -70,9 +70,7 @@ class Hail(HistoryMixin, db.Model, AsDictMixin, GetOr404Mixin):
     taxi_id = db.Column(db.String,
                         db.ForeignKey('taxi.id', name='hail_taxi_id', use_alter=True),
                         nullable=False)
-    taxi_relation = db.relationship('Taxi',
-                            backref="taxi", lazy="joined",
-                            foreign_keys=taxi_id)
+    taxi_relation = db.relationship('Taxi', lazy="joined", foreign_keys=taxi_id)
     _status = db.Column(db.Enum(*status_enum_list,
                         name='hail_status'),
                         default='emitted', nullable=False, name='status')
